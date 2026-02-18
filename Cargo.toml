@@ -1,6 +1,6 @@
 [package]
 name = "rug_calc"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "A Rug-powered scientific computing engine featuring high-performance, high-precision numerical evaluation."
 repository = "https://github.com/lhjok/rug_calc"

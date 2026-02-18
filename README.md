@@ -3,49 +3,45 @@
 A zero-copy, high-performance evaluator for arbitrary-precision scientific computing. Powered by Rug, 
 it delivers extreme accuracy and numerical stability with minimal memory overhead.
 
----
-
 ## ✨ Features
 
-* 🚀 **High Performance**: Features a **non-recursive** architecture that evaluates expressions in a **single traversal ($\mathcal{O}(n)$)**, ensuring predictable and blazing-fast execution.
+* 🚀 **High Performance**: Features a **non-recursive** architecture that evaluates expressions in a **single traversal**, ensuring predictable and blazing-fast execution.
 * ⚖️ **Arbitrary Precision**: Engineered with **2560-bit internal precision**, far exceeding the limitations of standard hardware floats for mission-critical calculations.
 * 📦 **Zero-Copy & Efficient**: Utilizes **byte-level scanning** and a custom **state-machine** to minimize memory allocations and CPU overhead during expression parsing.
 * 🧪 **Rich Mathematical Suite**: Supports **40+ built-in functions**, including advanced Trigonometry, Gamma, Zeta, Airy, and Error functions.
-* 🔭 **Scientific Constants**: Instant, high-precision access to fundamental constants: $\pi$ (**P**), $e$ (**E**), Catalan (**C**), and $\ln 2$ (**L**).
+* 🔭 **Scientific Constants**: Instant, high-precision access to fundamental constants: Pi (**P**), e (**E**), Catalan (**C**), and ln 2 (**L**).
 * 🎨 **Smart Formatting**: Provides versatile output options, including **fixed-point rounding** and **"clean" string formatting** with support for up to 700 decimal places.
 * 🛡️ **Robust Stability**: Designed for applications requiring **extreme numerical stability** and graceful error handling over panics.
 
----
-
 ## 🚀 Quick Start
-
 Add this to your `Cargo.toml`:
+
 ```toml
 [dependencies]
-rug_calc = "0.1.0"
+rug_calc = "0.1.1"
 ```
-
----
 
 ## ✨ Example Usage
 The following example demonstrates how to use
+
 ```rust
 use rug_calc::Calculator;
 
 let mut calc = Calculator::new();
 
 // Simple arithmetic
-let result = calc.run(&"1+2*3".to_string()).unwrap();
+let result = calc.run(&"8*(6+6/2-2*5)+-2".to_string()).unwrap();
 
-// Advanced functions (Calculating sin(π/4))
-let sin_pi_4 = calc.run(&"sin(P/4)".to_string()).unwrap();
+// Advanced functions (Calculating cos(sin(π/4)))
+let cos_sin_pi_4 = calc.run(&"cos(sin(P/4))".to_string()).unwrap();
+
+// infinitely nested scientific computing
+let result = calc.run(&"8*6-(cos(6-3*(6/P^2-6)*3)+5)/E*8".to_string()).unwrap();
 
 // High-precision string output (50 decimal places)
 let pi_str = calc.run_round(&"P".to_string(), Some(50)).unwrap();
 println!("Pi to 50 places: {}", pi_str);
 ```
-
----
 
 ## Contributing
 Contributions are welcome! Please open issues or pull requests on [GitHub](https://github.com/lhjok/rug_calc).
