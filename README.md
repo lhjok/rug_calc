@@ -18,7 +18,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rug_calc = "0.1.1"
+rug_calc = "0.1.2"
 ```
 
 ## ✨ Example Usage
@@ -30,16 +30,16 @@ use rug_calc::Calculator;
 let mut calc = Calculator::new();
 
 // Simple arithmetic
-let result = calc.run(&"8*(6+6/2-2*5)+-2".to_string()).unwrap();
+let result = calc.run("8*(6+6/2-2*5)+-2=").unwrap();
 
 // Advanced functions (Calculating cos(sin(π/4)))
-let cos_sin_pi_4 = calc.run(&"cos(sin(P/4))".to_string()).unwrap();
+let cos_sin_pi_4 = calc.run("cos(sin(P/4))=").unwrap();
 
 // infinitely nested scientific computing
-let result = calc.run(&"8*6-(cos(6-3*(6/P^2-6)*3)+5)/E*8".to_string()).unwrap();
+let result = calc.run("8*6-(cos(6-3*(6/P^2-6)*3)+5)/E*8").unwrap();
 
 // High-precision string output (50 decimal places)
-let pi_str = calc.run_round(&"P".to_string(), Some(50)).unwrap();
+let pi_str = calc.run_round("P", Some(50)).unwrap();
 println!("Pi to 50 places: {}", pi_str);
 ```
 

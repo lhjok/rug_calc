@@ -19,6 +19,7 @@ use rug::Float;
 use rug::ops::Pow;
 use once_cell::sync::Lazy;
 use rug::float::Constant;
+use std::borrow::Cow;
 use phf::phf_map;
 use phf::Map;
 
@@ -168,7 +169,7 @@ static MATH: Map<&'static str, MathFn> = phf_map! {
 /// ```
 /// use rug_calc::Calculator;
 /// let mut calc = Calculator::new();
-/// let val = calc.run(&"sqrt(2)".to_string()).unwrap();
+/// let val = calc.run("sqrt(2)").unwrap();
 /// ```
 #[derive(Clone)]
 pub struct Calculator {
@@ -177,6 +178,13 @@ pub struct Calculator {
     function: Vec<Option<MathFn>>,
     numbers: Vec<Float>,
     state: State,
+}
+
+fn extract(expr: &str, n: usize, i: usize) -> Result<Float, CalcError> {
+    match Float::parse(&expr[n..i]) {
+        Ok(valid) => Float::with_val(2560, valid).accuracy(),
+        Err(_) => Err(CalcError::InvalidNumber)
+    }
 }
 
 /// Extension trait for `u8` to handle operator logic.
@@ -206,8 +214,6 @@ trait StringExt {
     fn to_fixed_clean(&self) -> Result<String, CalcError>;
     /// Rounds the floating-point string to a specific number of decimal places.
     fn to_fixed_round(&self, prec: i32) -> Result<String, CalcError>;
-    /// Extracts a number from a substring and converts it into a high-precision `Float`.
-    fn extract(&self, n: usize, i: usize) -> Result<Float, CalcError>;
 }
 
 impl ByteExt for u8 {
@@ -401,13 +407,6 @@ impl StringExt for String {
         let result = final_buf[..final_len].to_vec();
         Ok(String::from_utf8(result).unwrap())
     }
-
-    fn extract(&self, n: usize, i: usize) -> Result<Float, CalcError> {
-        match Float::parse(&self[n..i]) {
-            Ok(valid) => Float::with_val(2560, valid).accuracy(),
-            Err(_) => Err(CalcError::InvalidNumber)
-        }
-    }
 }
 
 impl CalcError {
@@ -461,14 +460,19 @@ impl Calculator {
     /// # Examples
     /// ```
     /// let mut calc = Calculator::new();
-    /// let res = calc.run(&"sin(P/2)".to_string()).unwrap();
+    /// let res = calc.run("sin(P/2)=").unwrap();
     /// ```
-    pub fn run(&mut self, expr: &String) -> Result<Float, CalcError> {
-        let expr = format!("{}=", expr);
-        let mut locat: usize = 0;
+    pub fn run<S: AsRef<str>>(&mut self, expr: S) -> Result<Float, CalcError> {
+        let expr = expr.as_ref();
+        let bytes = if expr.as_bytes().ends_with(&[b'=']) {
+            let mut buffer = Vec::with_capacity(expr.len()+1);
+            buffer.extend_from_slice(expr.as_bytes());
+            buffer.push(b'='); Cow::Owned(buffer)
+        } else { Cow::Borrowed(expr.as_bytes()) };
         let mut bracket: usize = 0;
+        let mut locat: usize = 0;
 
-        for (index, &valid) in expr.as_bytes().iter().enumerate() {
+        for (index, &valid) in bytes.iter().enumerate() {
             match valid {
                 b'0'..=b'9' | b'.' => {
                     if !matches!(self.marker, Marker::RParen | Marker::Const | Marker::Func) {
@@ -495,7 +499,7 @@ impl Calculator {
                     }
 
                     if matches!(self.state, State::Operator | State::Initial) {
-                        self.numbers.push(expr.extract(locat, index)?);
+                        self.numbers.push(extract(expr, locat, index)?);
                         self.state = State::Operand;
                     }
 
@@ -540,7 +544,7 @@ impl Calculator {
                 b')' => {
                     if matches!(self.state, State::Operator | State::Initial) {
                         if matches!(self.marker, Marker::Number) {
-                            self.numbers.push(expr.extract(locat, index)?);
+                            self.numbers.push(extract(expr, locat, index)?);
                             self.state = State::Operand;
                         }
                     }
@@ -575,7 +579,7 @@ impl Calculator {
                     }
 
                     if matches!(self.state, State::Operator | State::Initial) {
-                        self.numbers.push(expr.extract(locat, index)?);
+                        self.numbers.push(extract(expr, locat, index)?);
                         self.state = State::Operand;
                     }
 
@@ -628,11 +632,11 @@ impl Calculator {
     /// # Example
     /// ```
     /// let mut calc = Calculator::new();
-    /// let s = calc.run_round(&"1/3".to_string(), Some(5)).unwrap();
+    /// let s = calc.run_round("1/3=", Some(5)).unwrap();
     /// assert_eq!(s, "0.33333");
     /// ```
-    pub fn run_round(
-        &mut self, expr: &String, digits: Option<usize>
+    pub fn run_round<S: AsRef<str>>(
+        &mut self, expr: S, digits: Option<usize>
     ) -> Result<String, CalcError> {
         match self.run(expr) {
             Ok(value) => Ok(value.to_round(digits)?),
