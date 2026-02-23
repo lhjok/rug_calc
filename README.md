@@ -18,8 +18,16 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rug_calc = "0.1.3"
+rug_calc = "0.1.4"
 ```
+
+## ✨ Performance Tips
+### Zero-Copy Parsing
+`rug_calc` is designed for high-performance scenarios. To achieve **Zero-Copy** parsing, the engine utilizes a state-machine that expects a terminator to trigger the final calculation.
+
+While the engine can automatically handle expressions without a terminator, it will involve a minor memory allocation to append one internally.
+
+**For maximum performance (Zero-Copy), it is recommended to append an `=` at the end of your expressions:**
 
 ## ✨ Example Usage
 The following example demonstrates how to use

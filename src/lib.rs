@@ -15,6 +15,16 @@
 //!     state-machine logic to minimize overhead.
 //!     ensuring safe integration into production systems.
 //!
+//! ## Performance Tips
+//!
+//! ### Zero-Copy Parsing
+//!
+//! `rug_calc` is designed for high-performance scenarios. To achieve **Zero-Copy** parsing, the engine utilizes a state-machine that expects a terminator to trigger the final calculation.
+//!
+//! While the engine can automatically handle expressions without a terminator, it will involve a minor memory allocation to append one internally.
+//!
+//! **For maximum performance (Zero-Copy), it is recommended to append an `=` at the end of your expressions:**
+//!
 use rug::Float;
 use rug::ops::Pow;
 use once_cell::sync::Lazy;
@@ -169,7 +179,7 @@ static MATH: Map<&'static str, MathFn> = phf_map! {
 /// ```
 /// use rug_calc::Calculator;
 /// let mut calc = Calculator::new();
-/// let val = calc.run("sqrt(2)").unwrap();
+/// let val = calc.run("sqrt(2)=").unwrap();
 /// ```
 #[derive(Clone)]
 pub struct Calculator {
