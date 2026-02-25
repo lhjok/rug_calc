@@ -18,16 +18,16 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rug_calc = "0.1.6"
+rug_calc = "0.1.7"
 ```
 
 ## 📚 Mathematical Function Support
 `rug_calc` provides a comprehensive suite of high-precision functions powered by the MPFR library.
 * `ai` , `abs` , `cos` , `sin` , `tan` , `csc` , `sec` , `cot` , `coth` , `ceil`
 * `cosh` , `sinh` , `tanh` , `sech` , `ln` , `csch` , `acos` , `asin` , `atan`
-* `acosh` , `asinh` , `atanh` , `log2` , `log10` , `sqrt` , `cbrt` , `fac` , `recip`
+* `acosh` , `asinh` , `atanh` , `log2` , `log10` , `sqrt` , `cbrt` , `fac`
 * `erf` , `li2` , `exp` , `exp2` ,`exp10` , `eint` , `zeta` , `trunc` , `gamma`
-* `floor` , `frac` , `sgn` , `erfc` , `digamma`
+* `floor` , `frac` , `sgn` , `erfc` , `digamma` , `recip`
 
 ## 💎 Constant Identifiers
 To maintain parsing efficiency and avoid ambiguity with functions, constants use single-character uppercase identifiers:
@@ -60,7 +60,8 @@ let cos_sin_pi_4 = calc.run("cos(sin(P/4))").unwrap();
 let mixed_result = calc.run("5.0e+12/Y").unwrap();
 
 // 5. Infinitely nested scientific computing
-let complex = calc.run("8*6-(cos(6-3*(6/P^2-6)*3)+5)/Y*8").unwrap();
+let expr = "8*6-(cos(6-3*(6/P^2-6)*3)+5)/Y*8";
+let complex = calc.run(expr).unwrap();
 
 // 6. High-precision string output (50 decimal places)
 let pi_str = calc.run_round("P", Some(50)).unwrap();
