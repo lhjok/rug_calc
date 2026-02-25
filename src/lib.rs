@@ -48,12 +48,12 @@
 //! // 3. Advanced functions (Calculating cos(sin(π/4)))
 //! let cos_sin_pi_4 = calc.run("cos(sin(P/4))").unwrap();
 //!
-//! // 4. Mixing Scientific Notation with Special Functions and Constants
+//! // 4. Mixing Scientific Notation with Special Constants
 //! // Calculates: 5.0*10^12 divided by Euler's constant (Y)
 //! let mixed_result = calc.run("5.0e+12/Y").unwrap();
 //!
 //! // 5. Infinitely nested scientific computing
-//! let complex = calc.run("8*6-(cos(6-3*(6/P^2-6)*3)+5e-1)/Y*8").unwrap();
+//! let complex = calc.run("8*6-(cos(6-3*(6/P^2-6)*3)+5)/Y*8").unwrap();
 //!
 //! // 6. High-precision string output (50 decimal places)
 //! let pi_str = calc.run_round("P", Some(50)).unwrap();

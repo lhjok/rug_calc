@@ -18,15 +18,16 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rug_calc = "0.1.5"
+rug_calc = "0.1.6"
 ```
 
 ## 📚 Mathematical Function Support
 `rug_calc` provides a comprehensive suite of high-precision functions powered by the MPFR library.
-* `ai` , `abs` , `cos` , `sin` , `tan` , `csc` , `sec` , `cot` , `coth` , `ceil` , `floor`
-* `cosh` , `sinh` , `tanh` , `sech` , `ln` , `csch` , `acos` , `asin` , `atan` , `frac` , `sgn`
-* `acosh` , `asinh` , `atanh` , `log2` , `log10` , `sqrt` , `cbrt` , `fac` , `recip` , `erfc`
-* `erf` , `li2` , `exp` , `exp2` ,`exp10` , `eint` , `zeta` , `trunc` , `gamma` , `digamma`
+* `ai` , `abs` , `cos` , `sin` , `tan` , `csc` , `sec` , `cot` , `coth` , `ceil`
+* `cosh` , `sinh` , `tanh` , `sech` , `ln` , `csch` , `acos` , `asin` , `atan`
+* `acosh` , `asinh` , `atanh` , `log2` , `log10` , `sqrt` , `cbrt` , `fac` , `recip`
+* `erf` , `li2` , `exp` , `exp2` ,`exp10` , `eint` , `zeta` , `trunc` , `gamma`
+* `floor` , `frac` , `sgn` , `erfc` , `digamma`
 
 ## 💎 Constant Identifiers
 To maintain parsing efficiency and avoid ambiguity with functions, constants use single-character uppercase identifiers:
@@ -54,12 +55,12 @@ println!("Scientific result: {}", sci_result);
 // 3. Advanced functions (Calculating cos(sin(π/4)))
 let cos_sin_pi_4 = calc.run("cos(sin(P/4))").unwrap();
 
-// 4. Mixing Scientific Notation with Special Functions and Constants
+// 4. Mixing Scientific Notation with Special Constants
 // Calculates: 5.0*10^12 divided by Euler's constant (Y)
 let mixed_result = calc.run("5.0e+12/Y").unwrap();
 
 // 5. Infinitely nested scientific computing
-let complex = calc.run("8*6-(cos(6-3*(6/P^2-6)*3)+5e-1)/Y*8").unwrap();
+let complex = calc.run("8*6-(cos(6-3*(6/P^2-6)*3)+5)/Y*8").unwrap();
 
 // 6. High-precision string output (50 decimal places)
 let pi_str = calc.run_round("P", Some(50)).unwrap();
