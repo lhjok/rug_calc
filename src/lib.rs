@@ -15,21 +15,59 @@
 //!     state-machine logic to minimize overhead.
 //!     ensuring safe integration into production systems.
 //!
-//! ## Performance Tips
+//! ## Mathematical Function Support
+//! `rug_calc` provides a comprehensive suite of high-precision functions powered by the MPFR library.
+//! * `ai` , `abs` , `cos` , `sin` , `tan` , `csc` , `sec` , `cot` , `coth` , `ceil` , `floor`
+//! * `cosh` , `sinh` , `tanh` , `sech` , `ln` , `csch` , `acos` , `asin` , `atan` , `frac` , `sgn`
+//! * `acosh` , `asinh` , `atanh` , `log2` , `log10` , `sqrt` , `cbrt` , `fac` , `recip` , `erfc`
+//! * `erf` , `li2` , `exp` , `exp2` ,`exp10` , `eint` , `zeta` , `trunc` , `gamma` , `digamma`
 //!
-//! ### Zero-Copy Parsing
+//! ## Constant Identifiers
+//! To maintain parsing efficiency and avoid ambiguity with functions, constants use single-character uppercase identifiers:
+//! * `P`: Pi constant
+//! * `Y`: Euler-Mascheroni constant
+//! * `C`: Catalan’s constant
+//! * `L`: Natural logarithm of 2 (Log2)
 //!
-//! `rug_calc` is designed for high-performance scenarios. To achieve **Zero-Copy** parsing, the engine utilizes a state-machine that expects a terminator to trigger the final calculation.
+//! ## Example Usage
+//! The following example demonstrates how to use
 //!
-//! While the engine can automatically handle expressions without a terminator, it will involve a minor memory allocation to append one internally.
+//! ```rust
+//! use rug_calc::Calculator;
 //!
-//! **For maximum performance (Zero-Copy), it is recommended to append an `=` at the end of your expressions:**
+//! let mut calc = Calculator::new();
+//!
+//! // 1. Simple arithmetic with negative results
+//! let result = calc.run("8*(6+6/2-2*5)+-2").unwrap();
+//!
+//! // 2. Scientific Notation (Zero-Copy parsing of 'e')
+//! // Calculates: (1.23*10^-5)*2
+//! let sci_result = calc.run("1.23e-5*2").unwrap();
+//! println!("Scientific result: {}", sci_result);
+//!
+//! // 3. Advanced functions (Calculating cos(sin(π/4)))
+//! let cos_sin_pi_4 = calc.run("cos(sin(P/4))").unwrap();
+//!
+//! // 4. Mixing Scientific Notation with Special Functions and Constants
+//! // Calculates: 5.0*10^12 divided by Euler's constant (Y)
+//! let mixed_result = calc.run("5.0e+12/Y").unwrap();
+//!
+//! // 5. Infinitely nested scientific computing
+//! let complex = calc.run("8*6-(cos(6-3*(6/P^2-6)*3)+5e-1)/Y*8").unwrap();
+//!
+//! // 6. High-precision string output (50 decimal places)
+//! let pi_str = calc.run_round("P", Some(50)).unwrap();
+//! println!("Pi to 50 places: {}", pi_str);
+//!
+//! // 7. Small number formatting from scientific notation
+//! let small_val = calc.run_round("1E-10", Some(12)).unwrap();
+//! println!("Small value: {}", small_val); // "0.0000000001"
+//! ```
 //!
 use rug::Float;
 use rug::ops::Pow;
 use once_cell::sync::Lazy;
 use rug::float::Constant;
-use std::borrow::Cow;
 use phf::phf_map;
 use phf::Map;
 
@@ -73,8 +111,6 @@ pub enum CalcError {
     FunctionUndefined,
     /// The character is not a recognized operator.
     OperatorUndefined,
-    /// The expression ended abruptly without an equal sign or newline.
-    NoTerminator,
     /// Provided string is empty or contains only whitespace.
     EmptyExpression,
     /// Failed to parse a string literal into a valid floating-point number.
@@ -179,7 +215,7 @@ static MATH: Map<&'static str, MathFn> = phf_map! {
 /// ```
 /// use rug_calc::Calculator;
 /// let mut calc = Calculator::new();
-/// let val = calc.run("sqrt(2)=").unwrap();
+/// let val = calc.run("sqrt(2)").unwrap();
 /// ```
 #[derive(Clone)]
 pub struct Calculator {
@@ -187,6 +223,7 @@ pub struct Calculator {
     operator: Vec<u8>,
     function: Vec<Option<MathFn>>,
     numbers: Vec<Float>,
+    bracket: usize,
     state: State,
 }
 
@@ -431,7 +468,6 @@ impl CalcError {
             CalcError::ExpressionError => String::from("Expression Error"),
             CalcError::FunctionUndefined => String::from("Function Undefined"),
             CalcError::OperatorUndefined => String::from("Operator Undefined"),
-            CalcError::NoTerminator => String::from("No Terminator"),
             CalcError::EmptyExpression => String::from("Empty Expression"),
             CalcError::InvalidNumber => String::from("Invalid Number"),
         }
@@ -447,6 +483,7 @@ impl Calculator {
             function: vec![None; 32],
             operator: Vec::with_capacity(32),
             marker: Marker::Init,
+            bracket: 0,
         }
     }
 
@@ -458,6 +495,25 @@ impl Calculator {
         self.function.fill(None);
         self.marker = Marker::Init;
         self.operator.clear();
+        self.bracket = 0;
+    }
+
+    fn finish(&mut self, expr: &str, locat: usize, end_idx: usize) -> Result<Float, CalcError> {
+        if matches!(self.marker, Marker::Init) {
+            return Err(CalcError::EmptyExpression);
+        } else if self.bracket > 0 || matches!(self.marker, Marker::NegSub | Marker::Char | Marker::Func) {
+            return Err(CalcError::ExpressionError);
+        }
+        if matches!(self.state, State::Operator | State::Initial) {
+            self.numbers.push(extract(expr, locat, end_idx)?);
+            self.state = State::Operand;
+        }
+        while let Some(op) = self.operator.pop() {
+            let value = op.computing(self)?;
+            self.numbers.push(value);
+        }
+        let result = self.numbers.pop().unwrap();
+        self.reset(); Ok(result)
     }
 
     /// Evaluates a mathematical expression and returns the raw `rug::Float` result.
@@ -465,23 +521,17 @@ impl Calculator {
     /// # Supported Syntax
     /// - Basic: `+`, `-`, `*`, `/`, `%`, `^`
     /// - Functions: `sin(x)`, `ln(x)`, `fac(x)` (factorial), etc.
-    /// - Constants: `P` (Pi), `E` (Euler), `C` (Catalan), `L` (Log2)
+    /// - Constants: `P` (Pi), `Y` (Euler), `C` (Catalan), `L` (Log2)
     ///
     /// # Examples
     /// ```
     /// let mut calc = Calculator::new();
-    /// let res = calc.run("sin(P/2)=").unwrap();
+    /// let res = calc.run("sin(P/2)").unwrap();
     /// ```
     pub fn run<S: AsRef<str>>(&mut self, expr: S) -> Result<Float, CalcError> {
         let expr = expr.as_ref();
-        let bytes = if !expr.as_bytes().ends_with(&[b'=']) {
-            let mut buffer = Vec::with_capacity(expr.len()+1);
-            buffer.extend_from_slice(expr.as_bytes());
-            buffer.push(b'='); Cow::Owned(buffer)
-        } else { Cow::Borrowed(expr.as_bytes()) };
-        let mut bracket: usize = 0;
+        let bytes = expr.as_bytes();
         let mut locat: usize = 0;
-
         for (index, &valid) in bytes.iter().enumerate() {
             match valid {
                 b'0'..=b'9' | b'.' => {
@@ -490,30 +540,34 @@ impl Calculator {
                         continue;
                     }
                     return Err(CalcError::ExpressionError);
-                }
-
-                b'a'..=b'z' => {
-                    if !matches!(self.marker, Marker::RParen | Marker::Const | Marker::NegSub | Marker::Number) {
+                },
+                ch @ b'a'..=b'z' | ch @ b'E' => {
+                    if (ch == b'e' || ch == b'E') && matches!(self.marker, Marker::Number) {
+                        continue;
+                    } else if !matches!(self.marker, Marker::RParen | Marker::Const | Marker::NegSub | Marker::Number) {
                         self.marker = Marker::Func;
                         continue;
                     }
                     return Err(CalcError::ExpressionError);
-                }
-
+                },
                 ch @ b'+' | ch @ b'-' | ch @ b'*' | ch @ b'/' | ch @ b'%' | ch @ b'^' => {
+                    if (ch == b'-' || ch == b'+') && matches!(self.marker, Marker::Number) {
+                        let prev_byte = bytes.get(index-1);
+                        if matches!(prev_byte, Some(b'e' | b'E')) {
+                            continue;
+                        }
+                    }
                     if ch == b'-' && matches!(self.marker, Marker::Init | Marker::LParen | Marker::Char) {
                         self.marker = Marker::NegSub;
                         continue;
                     } else if !matches!(self.marker, Marker::Number | Marker::RParen | Marker::Const) {
                         return Err(CalcError::ExpressionError);
                     }
-
                     if matches!(self.state, State::Operator | State::Initial) {
                         self.numbers.push(extract(expr, locat, index)?);
                         self.state = State::Operand;
                     }
-
-                    while self.operator.len() != 0 && self.operator.last().unwrap() != &b'(' {
+                    while self.operator.len() != 0 && self.operator.last() != Some(&b'(') {
                         if self.operator.last().unwrap().priority()? >= ch.priority()? {
                             let value = self.operator.pop().unwrap().computing(self)?;
                             self.numbers.push(value);
@@ -521,36 +575,32 @@ impl Calculator {
                             break;
                         }
                     }
-
                     self.operator.push(ch);
                     self.state = State::Operator;
                     self.marker = Marker::Char;
                     locat = index + 1;
                     continue;
-                }
-
+                },
                 ch @ b'(' => {
                     if matches!(self.marker, Marker::Func) {
                         let name = &expr[locat..index];
                         if let Some(&func_ptr) = MATH.get(name) {
-                            self.function[bracket+1] = Some(func_ptr);
+                            self.function[self.bracket+1] = Some(func_ptr);
                         } else {
                             return Err(CalcError::FunctionUndefined);
                         }
                     }
-
                     if matches!(self.state, State::Operator | State::Initial) {
                         if !matches!(self.marker, Marker::Number | Marker::NegSub) {
                             self.operator.push(ch);
                             locat = index + 1;
                             self.marker = Marker::LParen;
-                            bracket += 1;
+                            self.bracket += 1;
                             continue;
                         }
                     }
                     return Err(CalcError::ExpressionError);
-                }
-
+                },
                 b')' => {
                     if matches!(self.state, State::Operator | State::Initial) {
                         if matches!(self.marker, Marker::Number) {
@@ -558,65 +608,42 @@ impl Calculator {
                             self.state = State::Operand;
                         }
                     }
-
                     if matches!(self.state, State::Operand) {
-                        if bracket > 0 {
-                            while self.operator.last().unwrap() != &b'(' {
+                        if self.bracket > 0 {
+                            while self.operator.last() != Some(&b'(') {
                                 let value = self.operator.pop().unwrap().computing(self)?;
                                 self.numbers.push(value);
                             }
-
-                            if let Some(func) = self.function[bracket].take() {
+                            if let Some(func) = self.function[self.bracket].take() {
                                 let value = self.numbers.pop().unwrap();
                                 self.numbers.push(func(value)?);
                             }
-
                             locat = index + 1;
                             self.operator.pop();
                             self.marker = Marker::RParen;
-                            bracket -= 1;
+                            self.bracket -= 1;
                             continue;
                         }
                     }
                     return Err(CalcError::ExpressionError);
-                }
-
+                },
                 b'=' | b'\n' | b'\r' => {
-                    if matches!(self.marker, Marker::Init) {
-                        return Err(CalcError::EmptyExpression);
-                    } else if bracket > 0 || matches!(self.marker, Marker::NegSub | Marker::Char | Marker::Func) {
-                        return Err(CalcError::ExpressionError);
-                    }
-
-                    if matches!(self.state, State::Operator | State::Initial) {
-                        self.numbers.push(extract(expr, locat, index)?);
-                        self.state = State::Operand;
-                    }
-
-                    while self.operator.len() != 0 {
-                        let value = self.operator.pop().unwrap().computing(self)?;
-                        self.numbers.push(value);
-                    }
-
-                    let result = self.numbers.pop().unwrap();
-                    self.reset(); return Ok(result);
-                }
-
-                ch @ b'P' | ch @ b'E' | ch @ b'C' | ch @ b'L' => {
+                    return self.finish(expr, locat, index);
+                },
+                ch @ b'P' | ch @ b'Y' | ch @ b'C' | ch @ b'L' => {
                     if matches!(self.state, State::Operator | State::Initial) {
                         let constant = match ch {
                             b'P' => &Constant::Pi,
-                            b'E' => &Constant::Euler,
+                            b'Y' => &Constant::Euler,
                             b'C' => &Constant::Catalan,
                             b'L' => &Constant::Log2,
                             _ => return Err(CalcError::UnknownError)
                         };
-
                         if !matches!(self.marker, Marker::Number | Marker::Func) {
                             let value = if matches!(self.marker, Marker::NegSub) {
-                                0.0 - Float::with_val(128, constant)
+                                0.0 - Float::with_val(2560, constant)
                             } else {
-                                Float::with_val(128, constant)
+                                Float::with_val(2560, constant)
                             };
                             self.numbers.push(value);
                             self.state = State::Operand;
@@ -626,12 +653,11 @@ impl Calculator {
                         }
                     }
                     return Err(CalcError::ExpressionError);
-                }
-
-                _ => return Err(CalcError::OperatorUndefined)
+                },
+                _ => return Err(CalcError::OperatorUndefined),
             }
         }
-        Err(CalcError::NoTerminator)
+        self.finish(expr, locat, expr.len())
     }
 
     /// Evaluates an expression and returns a formatted string.
@@ -642,7 +668,7 @@ impl Calculator {
     /// # Example
     /// ```
     /// let mut calc = Calculator::new();
-    /// let s = calc.run_round("1/3=", Some(5)).unwrap();
+    /// let s = calc.run_round("1/3", Some(5)).unwrap();
     /// assert_eq!(s, "0.33333");
     /// ```
     pub fn run_round<S: AsRef<str>>(
