@@ -18,16 +18,22 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rug_calc = "0.1.7"
+rug_calc = "0.1.8"
 ```
+
+## 🛠️ Supported Syntax
+`rug_calc` utilizes a state-machine parser to handle complex mathematical structures without recursion:
+* Basic arithmetic operations: `+`, `-`, `*`, `/`, `%`, `^`
+* Floating-point remainder (fmod): `%`
+* Exponentiation (power): `^`
+* Unlimited nesting depth for grouped expressions: `()`,
+* Scientific notation: `1.23e-5`, `1.23E-5`, `1.23e+5`, `1.23E5`
+* Constant Identifiers: `P`, `Y`, `C`, `L`
 
 ## 📚 Mathematical Function Support
 `rug_calc` provides a comprehensive suite of high-precision functions powered by the MPFR library.
-* `ai` , `abs` , `cos` , `sin` , `tan` , `csc` , `sec` , `cot` , `coth` , `ceil`
-* `cosh` , `sinh` , `tanh` , `sech` , `ln` , `csch` , `acos` , `asin` , `atan`
-* `acosh` , `asinh` , `atanh` , `log2` , `log10` , `sqrt` , `cbrt` , `fac`
-* `erf` , `li2` , `exp` , `exp2` ,`exp10` , `eint` , `zeta` , `trunc` , `gamma`
-* `floor` , `frac` , `sgn` , `erfc` , `digamma` , `recip`
+* Advanced functions: `ai`, `abs`, `cos`, `sin`, `tan`, `csc`, `sec`, `cot`, `coth`, `ceil`, `cosh`, `sinh`, `tanh`, `sech`, `ln`, `csch`, `acos`, `asin`, `atan`, `acosh`, `asinh`, `atanh`, `log2`, `log10`, `sqrt`, `cbrt`, `fac`, `erf`, `li2`, `exp`, `exp2`,`exp10`, `eint`, `zeta`, `trunc`, `gamma`, `floor`, `frac`, `sgn`, `erfc`, `digamma`, `recip`
+* Supports scientific notation: Case-insensitive `e` or `E` is supported when preceded by a digit.
 
 ## 💎 Constant Identifiers
 To maintain parsing efficiency and avoid ambiguity with functions, constants use single-character uppercase identifiers:
@@ -37,7 +43,7 @@ To maintain parsing efficiency and avoid ambiguity with functions, constants use
 * `L`: Natural logarithm of 2 (Log2)
 
 ## 💡 Example Usage
-The following example demonstrates how to use
+The following example demonstrates how to use.
 
 ```rust
 use rug_calc::Calculator;

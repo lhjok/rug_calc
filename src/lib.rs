@@ -15,12 +15,19 @@
 //!     state-machine logic to minimize overhead.
 //!     ensuring safe integration into production systems.
 //!
+//! ## Supported Syntax
+//! `rug_calc` utilizes a state-machine parser to handle complex mathematical structures without recursion:
+//! * Basic arithmetic operations: `+`, `-`, `*`, `/`, `%`, `^`
+//! * Floating-point remainder (fmod): `%`
+//! * Exponentiation (power): `^`
+//! * Unlimited nesting depth for grouped expressions: `()`,
+//! * Scientific notation: `1.23e-5`, `1.23E-5`, `1.23e+5`, `1.23E5`
+//! * Constant Identifiers: `P`, `Y`, `C`, `L`
+//!
 //! ## Mathematical Function Support
 //! `rug_calc` provides a comprehensive suite of high-precision functions powered by the MPFR library.
-//! * `ai` , `abs` , `cos` , `sin` , `tan` , `csc` , `sec` , `cot` , `coth` , `ceil` , `floor`
-//! * `cosh` , `sinh` , `tanh` , `sech` , `ln` , `csch` , `acos` , `asin` , `atan` , `frac` , `sgn`
-//! * `acosh` , `asinh` , `atanh` , `log2` , `log10` , `sqrt` , `cbrt` , `fac` , `recip` , `erfc`
-//! * `erf` , `li2` , `exp` , `exp2` ,`exp10` , `eint` , `zeta` , `trunc` , `gamma` , `digamma`
+//! * Advanced functions: `ai`, `abs`, `cos`, `sin`, `tan`, `csc`, `sec`, `cot`, `coth`, `ceil`, `cosh`, `sinh`, `tanh`, `sech`, `ln`, `csch`, `acos`, `asin`, `atan`, `acosh`, `asinh`, `atanh`, `log2`, `log10`, `sqrt`, `cbrt`, `fac`, `erf`, `li2`, `exp`, `exp2`,`exp10`, `eint`, `zeta`, `trunc`, `gamma`, `floor`, `frac`, `sgn`, `erfc`, `digamma`, `recip`
+//! * Supports scientific notation: Case-insensitive `e` or `E` is supported when preceded by a digit.
 //!
 //! ## Constant Identifiers
 //! To maintain parsing efficiency and avoid ambiguity with functions, constants use single-character uppercase identifiers:
@@ -30,7 +37,7 @@
 //! * `L`: Natural logarithm of 2 (Log2)
 //!
 //! ## Example Usage
-//! The following example demonstrates how to use
+//! The following example demonstrates how to use.
 //!
 //! ```rust
 //! use rug_calc::Calculator;
@@ -215,8 +222,9 @@ static MATH: Map<&'static str, MathFn> = phf_map! {
 /// ```
 /// use rug_calc::Calculator;
 /// let mut calc = Calculator::new();
-/// let val = calc.run("sqrt(2)").unwrap();
+/// let val = calc.run("8*6-(cos(6-3*(6/P^2-6)*3)+5)/Y*8").unwrap();
 /// ```
+
 #[derive(Clone)]
 pub struct Calculator {
     marker: Marker,
@@ -526,8 +534,9 @@ impl Calculator {
     /// # Examples
     /// ```
     /// let mut calc = Calculator::new();
-    /// let res = calc.run("sin(P/2)").unwrap();
+    /// let res = calc.run("cos(sin(P/4))").unwrap();
     /// ```
+
     pub fn run<S: AsRef<str>>(&mut self, expr: S) -> Result<Float, CalcError> {
         let expr = expr.as_ref();
         let bytes = expr.as_bytes();
@@ -671,6 +680,7 @@ impl Calculator {
     /// let s = calc.run_round("1/3", Some(5)).unwrap();
     /// assert_eq!(s, "0.33333");
     /// ```
+
     pub fn run_round<S: AsRef<str>>(
         &mut self, expr: S, digits: Option<usize>
     ) -> Result<String, CalcError> {
