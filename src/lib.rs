@@ -23,6 +23,8 @@
 //! * Unlimited nesting depth for grouped expressions: `()`,
 //! * Scientific notation: `1.23e-5`, `1.23E-5`, `1.23e+5`, `1.23E5`
 //! * Constant Identifiers: `P`, `Y`, `C`, `L`
+//! * Operator Distinction: Automatically differentiates between - as a negative sign and - as a subtraction operator based on context. `0-5` vs. `-5`
+//! * Supports scientific notation: Case-insensitive `e` or `E` is supported when preceded by a digit.
 //!
 //! ## Mathematical Function Support
 //! `rug_calc` provides a comprehensive suite of high-precision functions powered by the MPFR library.
@@ -35,6 +37,11 @@
 //! * `Y`: Euler-Mascheroni constant
 //! * `C`: Catalan’s constant
 //! * `L`: Natural logarithm of 2 (Log2)
+//!
+//! ## Intelligent Sign Recognition
+//! One of the core strengths of `rug_calc` is its ability to distinguish between a Unary Minus (negative numbers) and a Binary Minus (subtraction) in a single pass.
+//! * Smart Context Detection: The state machine automatically identifies if a - is a sign prefix (e.g., `-5`) or an operator (e.g., `0-5`) based on the preceding Marker.
+//! * Scientific Notation Integration: It seamlessly recognizes signs within exponents (e.g., `1e-10` or `-1e+10`) without breaking the mathematical flow.
 //!
 //! ## Example Usage
 //! The following example demonstrates how to use.
