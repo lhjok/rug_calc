@@ -40,7 +40,7 @@
 //!
 //! ## Intelligent Sign Recognition
 //! One of the core strengths of `rug_calc` is its ability to distinguish between a Unary Minus (negative numbers) and a Binary Minus (subtraction) in a single pass.
-//! * Smart Context Detection: The state machine automatically identifies if a - is a sign prefix (e.g., `-5`) or an operator (e.g., `0-5`) based on the preceding Marker.
+//! * Smart Context Detection: The state machine automatically identifies if a - is a sign prefix (e.g., `-5`) or an operator (e.g., `10-5`) based on the preceding Marker.
 //! * Scientific Notation Integration: It seamlessly recognizes signs within exponents (e.g., `1e-10` or `-1e+10`) without breaking the mathematical flow.
 //!
 //! ## Example Usage
