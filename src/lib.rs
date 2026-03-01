@@ -1,6 +1,6 @@
 //! # Rug-Calc
 //!
-//! `rug_calc` is a high-performance, high-precision expression evaluator.
+//! `rug_calc` is a high-performance, arbitrary-precision expression evaluator.
 //! It bridges the gap between raw MPFR calculations and user-friendly string expressions.
 //!
 //! ## Why Rug-Calc?
@@ -26,7 +26,7 @@
 //! * Supports scientific notation: Case-insensitive `e` or `E` is supported when preceded by a digit.
 //!
 //! ## Mathematical Function Support
-//! `rug_calc` provides a comprehensive suite of high-precision functions powered by the MPFR library.
+//! `rug_calc` provides a comprehensive suite of arbitrary-precision functions powered by the MPFR library.
 //! * Advanced functions: `ai`, `abs`, `cos`, `sin`, `tan`, `csc`, `sec`, `cot`, `coth`, `ceil`, `cosh`, `sinh`, `tanh`, `sech`, `ln`, `csch`, `acos`, `asin`, `atan`, `acosh`, `asinh`, `atanh`, `log2`, `log10`, `sqrt`, `cbrt`, `fac`, `erf`, `li2`, `exp`, `exp2`, `exp10`, `eint`, `zeta`, `trunc`, `gamma`, `floor`, `frac`, `sgn`, `erfc`, `digamma`, `recip`
 //! * Supports scientific notation: Case-insensitive `e` or `E` is supported when preceded by a digit.
 //!
@@ -272,7 +272,7 @@ trait FloatExt {
     fn fmod(&self, n: &Float, prec: u32) -> Float;
     /// Validates if the result is a finite number and within the allowed magnitude.
     fn accuracy(self, n: &Float) -> Result<Float, CalcError>;
-    /// Converts the high-precision float to a rounded string representation.
+    /// Converts the arbitrary-precision float to a rounded string representation.
     /// Supports custom precision up to 700 decimal places.
     fn to_round(&self, digits: Option<usize>) -> Result<String, CalcError>;
 }

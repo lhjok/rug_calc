@@ -33,7 +33,7 @@ rug_calc = "0.1.11"
 * Supports scientific notation: Case-insensitive `e` or `E` is supported when preceded by a digit.
 
 ## 📚 Mathematical Function Support
-`rug_calc` provides a comprehensive suite of high-precision functions powered by the MPFR library.
+`rug_calc` provides a comprehensive suite of arbitrary-precision functions powered by the MPFR library.
 * Advanced functions: `ai`, `abs`, `cos`, `sin`, `tan`, `csc`, `sec`, `cot`, `coth`, `ceil`, `cosh`, `sinh`, `tanh`, `sech`, `ln`, `csch`, `acos`, `asin`, `atan`, `acosh`, `asinh`, `atanh`, `log2`, `log10`, `sqrt`, `cbrt`, `fac`, `erf`, `li2`, `exp`, `exp2`, `exp10`, `eint`, `zeta`, `trunc`, `gamma`, `floor`, `frac`, `sgn`, `erfc`, `digamma`, `recip`
 * Supports scientific notation: Case-insensitive `e` or `E` is supported when preceded by a digit.
 
