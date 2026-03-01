@@ -1,8 +1,8 @@
 [package]
 name = "rug_calc"
-version = "0.1.11"
+version = "0.1.12"
 edition = "2021"
-description = "A Rug-powered scientific computing engine featuring high-performance, high-precision numerical evaluation."
+description = "A Rug-powered scientific computing engine featuring high-performance, arbitrary-precision numerical evaluation."
 repository = "https://github.com/lhjok/rug_calc"
 keywords = ["calculator", "math", "arbitrary-precision", "scientific", "high-performance"]
 categories = ["science", "mathematics", "parser-implementations"]
