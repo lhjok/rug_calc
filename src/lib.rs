@@ -6,9 +6,8 @@
 //! ## Why Rug-Calc?
 //!
 //! * **High Performance**: Non-recursive implementation, calculation completed in a single traversal.
-//! * **Ultra-High Precision**: While standard `f64` is limited to ~15-17 decimal digits,
-//!     this engine performs internal calculations with **2560-bit precision**, allowing
-//!     for hundreds of accurate decimal places.
+//! * **User-Defined Precision**: Empowering users to specify custom **internal bit-depths**, transcending
+//!     the limitations of standard hardware floats for mission-critical and research-grade calculations.
 //! * **Comprehensive Function Support**: Supports over 40 mathematical functions, including
 //!     trigonometry, hyperbolic functions, Gamma, Zeta, and Airy functions.
 //! * **Zero-Copy Logic**: Efficiently parses expressions using byte-level scanning and
@@ -49,7 +48,8 @@
 //! ```rust
 //! use rug_calc::Calculator;
 //!
-//! let mut calc = Calculator::new();
+//! // Create a calculator instance with 2560-bit precision.
+//! let mut calc = Calculator::new(2560);
 //!
 //! // 1. Simple arithmetic with negative results
 //! let result = calc.run("8*(6+6/2-2*5)+-2").unwrap();
@@ -80,7 +80,7 @@
 //!
 use rug::Float;
 use rug::ops::Pow;
-use once_cell::sync::Lazy;
+use std::cmp::max;
 use rug::float::Constant;
 use phf::phf_map;
 use phf::Map;
@@ -131,94 +131,95 @@ pub enum CalcError {
     InvalidNumber,
 }
 
-static MAX: Lazy<Float> = Lazy::new(||{
-    let max = Float::parse("1e+764").unwrap();
-    Float::with_val(2560, max)
-});
-
-type MathFn = fn(Float) -> Result<Float, CalcError>;
-static MATH: Map<&'static str, MathFn> = phf_map! {
-    "ai" => |v| v.ai().accuracy(),
-    "li" => |v| v.li2().accuracy(),
-    "erf" => |v| v.erf().accuracy(),
-    "erfc" => |v| v.erfc().accuracy(),
-    "abs" => |v| v.abs().accuracy(),
-    "ln" => |v| if v <= 0.0 {
+type MathFn = fn(Float, &Context) -> Result<Float, CalcError>;
+static MATH: Map<&'static [u8], MathFn> = phf_map! {
+    b"ai" => |v, c| v.ai().accuracy(&c.max),
+    b"li" => |v, c| v.li2().accuracy(&c.max),
+    b"erf" => |v, c| v.erf().accuracy(&c.max),
+    b"erfc" => |v, c| v.erfc().accuracy(&c.max),
+    b"abs" => |v, c| v.abs().accuracy(&c.max),
+    b"ln" => |v, c| if v <= 0.0 {
         Err(CalcError::ParameterError)
-    } else { v.ln().accuracy() },
-    "exp" => |v| v.exp().accuracy(),
-    "expt" => |v| v.exp2().accuracy(),
-    "expx" => |v| v.exp10().accuracy(),
-    "trunc" => |v| v.trunc().accuracy(),
-    "zeta" => |v| if v == 1.0 {
+    } else { v.ln().accuracy(&c.max) },
+    b"exp" => |v, c| v.exp().accuracy(&c.max),
+    b"expt" => |v, c| v.exp2().accuracy(&c.max),
+    b"expx" => |v, c| v.exp10().accuracy(&c.max),
+    b"trunc" => |v, c| v.trunc().accuracy(&c.max),
+    b"zeta" => |v, c| if v == 1.0 {
         Err(CalcError::ParameterError)
-    } else { v.zeta().accuracy() },
-    "gamma" => |v| if v == 0.0 {
+    } else { v.zeta().accuracy(&c.max) },
+    b"gamma" => |v, c| if v == 0.0 {
         Err(CalcError::ParameterError)
-    } else { v.gamma().accuracy() },
-    "digamma" => |v| if v == 0.0 {
+    } else { v.gamma().accuracy(&c.max) },
+    b"digamma" => |v, c| if v == 0.0 {
         Err(CalcError::ParameterError)
-    } else { v.digamma().accuracy() },
-    "eint" => |v| if v == 0.0 {
+    } else { v.digamma().accuracy(&c.max) },
+    b"eint" => |v, c| if v == 0.0 {
         Err(CalcError::ParameterError)
-    } else { v.eint().accuracy() },
-    "log" => |v| if v <= 0.0 {
+    } else { v.eint().accuracy(&c.max) },
+    b"log" => |v, c| if v <= 0.0 {
         Err(CalcError::ParameterError)
-    } else { v.log2().accuracy() },
-    "logx" => |v| if v <= 0.0 {
+    } else { v.log2().accuracy(&c.max) },
+    b"logx" => |v, c| if v <= 0.0 {
         Err(CalcError::ParameterError)
-    } else { v.log10().accuracy() },
-    "cos" => |v| v.cos().accuracy(),
-    "sin" => |v| v.sin().accuracy(),
-    "tan" => |v| v.tan().accuracy(),
-    "sec" => |v| v.sec().accuracy(),
-    "csc" => |v| if v == 0.0 {
+    } else { v.log10().accuracy(&c.max) },
+    b"cos" => |v, c| v.cos().accuracy(&c.max),
+    b"sin" => |v, c| v.sin().accuracy(&c.max),
+    b"tan" => |v, c| v.tan().accuracy(&c.max),
+    b"sec" => |v, c| v.sec().accuracy(&c.max),
+    b"csc" => |v, c| if v == 0.0 {
         Err(CalcError::ParameterError)
-    } else { v.csc().accuracy() },
-    "cot" => |v| if v == 0.0 {
+    } else { v.csc().accuracy(&c.max) },
+    b"cot" => |v, c| if v == 0.0 {
         Err(CalcError::ParameterError)
-    } else { v.cot().accuracy() },
-    "cosh" => |v| v.cosh().accuracy(),
-    "sinh" => |v| v.sinh().accuracy(),
-    "tanh" => |v| v.tanh().accuracy(),
-    "ceil" => |v| v.ceil().accuracy(),
-    "floor" => |v| v.floor().accuracy(),
-    "frac" => |v| v.fract().accuracy(),
-    "sgn" => |v| v.signum().accuracy(),
-    "recip" => |v| if v == 0.0 {
+    } else { v.cot().accuracy(&c.max) },
+    b"cosh" => |v, c| v.cosh().accuracy(&c.max),
+    b"sinh" => |v, c| v.sinh().accuracy(&c.max),
+    b"tanh" => |v, c| v.tanh().accuracy(&c.max),
+    b"ceil" => |v, c| v.ceil().accuracy(&c.max),
+    b"floor" => |v, c| v.floor().accuracy(&c.max),
+    b"frac" => |v, c| v.fract().accuracy(&c.max),
+    b"sgn" => |v, c| v.signum().accuracy(&c.max),
+    b"recip" => |v, c| if v == 0.0 {
         Err(CalcError::ParameterError)
-    } else { v.recip().accuracy() },
-    "csch" => |v| if v == 0.0 {
+    } else { v.recip().accuracy(&c.max) },
+    b"csch" => |v, c| if v == 0.0 {
         Err(CalcError::ParameterError)
-    } else { v.csch().accuracy() },
-    "sech" => |v| v.sech().accuracy(),
-    "coth" => |v| if v == 0.0 {
+    } else { v.csch().accuracy(&c.max) },
+    b"sech" => |v, c| v.sech().accuracy(&c.max),
+    b"coth" => |v, c| if v == 0.0 {
         Err(CalcError::ParameterError)
-    } else { v.coth().accuracy() },
-    "acos" => |v| if v < -1.0 || v > 1.0 {
+    } else { v.coth().accuracy(&c.max) },
+    b"acos" => |v, c| if v < -1.0 || v > 1.0 {
         Err(CalcError::ParameterError)
-    } else { v.acos().accuracy() },
-    "asin" => |v| if v < -1.0 || v > 1.0 {
+    } else { v.acos().accuracy(&c.max) },
+    b"asin" => |v, c| if v < -1.0 || v > 1.0 {
         Err(CalcError::ParameterError)
-    } else { v.asin().accuracy() },
-    "atan" => |v| v.atan().accuracy(),
-    "acosh" => |v| if v < 1.0 {
+    } else { v.asin().accuracy(&c.max) },
+    b"atan" => |v, c| v.atan().accuracy(&c.max),
+    b"acosh" => |v, c| if v < 1.0 {
         Err(CalcError::ParameterError)
-    } else { v.acosh().accuracy() },
-    "asinh" => |v| v.asinh().accuracy(),
-    "atanh" => |v| if v <= -1.0 || v >= 1.0 {
+    } else { v.acosh().accuracy(&c.max) },
+    b"asinh" => |v, c| v.asinh().accuracy(&c.max),
+    b"atanh" => |v, c| if v <= -1.0 || v >= 1.0 {
         Err(CalcError::ParameterError)
-    } else { v.atanh().accuracy() },
-    "cbrt" => |v| v.cbrt().accuracy(),
-    "sqrt" => |v| if v < 0.0 {
+    } else { v.atanh().accuracy(&c.max) },
+    b"cbrt" => |v, c| v.cbrt().accuracy(&c.max),
+    b"sqrt" => |v, c| if v < 0.0 {
         Err(CalcError::ParameterError)
-    } else { v.sqrt().accuracy() },
-    "fac" => |v| {
+    } else { v.sqrt().accuracy(&c.max) },
+    b"fac" => |v, c| {
         let to_u32 = v.to_u32_saturating().unwrap();
         let fac = Float::factorial(to_u32);
-        Float::with_val(2560, fac).accuracy()
+        Float::with_val(c.prec, fac).accuracy(&c.max)
     },
 };
+
+#[derive(Clone)]
+struct Context {
+    pub max: Float,
+    pub prec: u32,
+}
 
 /// The core Calculation engine.
 ///
@@ -228,13 +229,14 @@ static MATH: Map<&'static str, MathFn> = phf_map! {
 /// # Example
 /// ```
 /// use rug_calc::Calculator;
-/// let mut calc = Calculator::new();
+/// let mut calc = Calculator::new(2560);
 /// let val = calc.run("8*6-(cos(6-3*(6/P^2-6)*3)+5)/Y*8").unwrap();
 /// ```
 
 #[derive(Clone)]
 pub struct Calculator {
     marker: Marker,
+    context: Context,
     operator: Vec<u8>,
     function: Vec<Option<MathFn>>,
     numbers: Vec<Float>,
@@ -242,9 +244,16 @@ pub struct Calculator {
     state: State,
 }
 
-fn extract(expr: &str, n: usize, i: usize) -> Result<Float, CalcError> {
+fn max_value(prec: u32) -> Float {
+    let k = (prec as f64 * 0.0025).floor() as u32;
+    let d = (prec as f64 * 0.3010299956639812).floor() as u32;
+    let max_val = Float::i_pow_u(10, d-k);
+    Float::with_val(prec, max_val)
+}
+
+fn extract(expr: &[u8], c: &Context, n: usize, i: usize) -> Result<Float, CalcError> {
     match Float::parse(&expr[n..i]) {
-        Ok(valid) => Float::with_val(2560, valid).accuracy(),
+        Ok(valid) => Float::with_val(c.prec, valid).accuracy(&c.max),
         Err(_) => Err(CalcError::InvalidNumber)
     }
 }
@@ -260,9 +269,9 @@ trait ByteExt {
 /// Extension trait for `rug::Float` to provide formatting and accuracy checks.
 trait FloatExt {
     /// Floating-point modulo operation.
-    fn fmod(&self, n: &Float) -> Float;
+    fn fmod(&self, n: &Float, prec: u32) -> Float;
     /// Validates if the result is a finite number and within the allowed magnitude.
-    fn accuracy(self) -> Result<Float, CalcError>;
+    fn accuracy(self, n: &Float) -> Result<Float, CalcError>;
     /// Converts the high-precision float to a rounded string representation.
     /// Supports custom precision up to 700 decimal places.
     fn to_round(&self, digits: Option<usize>) -> Result<String, CalcError>;
@@ -289,33 +298,34 @@ impl ByteExt for u8 {
     }
 
     fn computing(&self, num: &mut Calculator) -> Result<Float, CalcError> {
+        let context = &num.context;
         let c1 = num.numbers.pop().ok_or(CalcError::ExpressionError)?;
         let c2 = num.numbers.pop().ok_or(CalcError::ExpressionError)?;
         match self {
-            b'+' => Float::with_val(2560, &c2 + &c1).accuracy(),
-            b'-' => Float::with_val(2560, &c2 - &c1).accuracy(),
-            b'*' => Float::with_val(2560, &c2 * &c1).accuracy(),
-            b'/' if &c1 != &0.0 => Float::with_val(2560, &c2 / &c1).accuracy(),
-            b'%' if &c1 != &0.0 => c2.fmod(&c1).accuracy(),
-            b'^' => Float::with_val(2560, &c2.pow(&c1)).accuracy(),
+            b'+' => Float::with_val(context.prec, &c2 + &c1).accuracy(&context.max),
+            b'-' => Float::with_val(context.prec, &c2 - &c1).accuracy(&context.max),
+            b'*' => Float::with_val(context.prec, &c2 * &c1).accuracy(&context.max),
+            b'/' if &c1 != &0.0 => Float::with_val(context.prec, &c2 / &c1).accuracy(&context.max),
+            b'%' if &c1 != &0.0 => c2.fmod(&c1, context.prec).accuracy(&context.max),
+            b'^' => Float::with_val(context.prec, &c2.pow(&c1)).accuracy(&context.max),
             _ => Err(CalcError::DivideByZero)
         }
     }
 }
 
 impl FloatExt for Float {
-    fn fmod(&self, n: &Float) -> Float {
-        let mut m = Float::with_val(2560, self / n);
+    fn fmod(&self, n: &Float, prec: u32) -> Float {
+        let mut m = Float::with_val(prec, self / n);
         if self < &0.0 {
             m.ceil_mut()
         } else { m.floor_mut() };
-        Float::with_val(2560, self - &m * n)
+        Float::with_val(prec, self - &m * n)
     }
 
-    fn accuracy(self) -> Result<Float, CalcError> {
+    fn accuracy(self, max: &Float) -> Result<Float, CalcError> {
         if self.is_nan() || self.is_infinite() {
             Err(CalcError::BeyondAccuracy)
-        } else if self > *MAX || self < *MAX.as_neg() {
+        } else if self > *max || self < *max.as_neg() {
             Err(CalcError::BeyondAccuracy)
         } else { Ok(self) }
     }
@@ -471,6 +481,13 @@ impl StringExt for String {
     }
 }
 
+impl Context {
+    fn new(prec: u32) -> Self {
+        let max = max_value(prec);
+        Self { prec, max }
+    }
+}
+
 impl CalcError {
     pub fn to_string(&self) -> String {
         match self {
@@ -491,9 +508,11 @@ impl CalcError {
 
 impl Calculator {
     /// Initializes a new Calculator instance with pre-allocated capacities.
-    pub fn new() -> Self {
+    pub fn new(prec: u32) -> Self {
+        let prec = max(64, prec);
         Self {
             state: State::Initial,
+            context: Context::new(prec),
             numbers: Vec::with_capacity(32),
             function: vec![None; 32],
             operator: Vec::with_capacity(32),
@@ -513,14 +532,14 @@ impl Calculator {
         self.bracket = 0;
     }
 
-    fn finish(&mut self, expr: &str, locat: usize, end_idx: usize) -> Result<Float, CalcError> {
+    fn finish(&mut self, expr: &[u8], locat: usize, end_idx: usize) -> Result<Float, CalcError> {
         if matches!(self.marker, Marker::Init) {
             return Err(CalcError::EmptyExpression);
         } else if self.bracket > 0 || matches!(self.marker, Marker::NegSub | Marker::Char | Marker::Func) {
             return Err(CalcError::ExpressionError);
         }
         if matches!(self.state, State::Operator | State::Initial) {
-            self.numbers.push(extract(expr, locat, end_idx)?);
+            self.numbers.push(extract(expr, &self.context, locat, end_idx)?);
             self.state = State::Operand;
         }
         while let Some(op) = self.operator.pop() {
@@ -540,13 +559,12 @@ impl Calculator {
     ///
     /// # Examples
     /// ```
-    /// let mut calc = Calculator::new();
+    /// let mut calc = Calculator::new(2560);
     /// let res = calc.run("cos(sin(P/4))").unwrap();
     /// ```
 
-    pub fn run<S: AsRef<str>>(&mut self, expr: S) -> Result<Float, CalcError> {
-        let expr = expr.as_ref();
-        let bytes = expr.as_bytes();
+    pub fn run<S: AsRef<[u8]>>(&mut self, expr: S) -> Result<Float, CalcError> {
+        let bytes = expr.as_ref();
         let mut locat: usize = 0;
         for (index, &valid) in bytes.iter().enumerate() {
             match valid {
@@ -580,7 +598,7 @@ impl Calculator {
                         return Err(CalcError::ExpressionError);
                     }
                     if matches!(self.state, State::Operator | State::Initial) {
-                        self.numbers.push(extract(expr, locat, index)?);
+                        self.numbers.push(extract(bytes, &self.context, locat, index)?);
                         self.state = State::Operand;
                     }
                     while self.operator.len() != 0 && self.operator.last() != Some(&b'(') {
@@ -599,7 +617,7 @@ impl Calculator {
                 },
                 ch @ b'(' => {
                     if matches!(self.marker, Marker::Func) {
-                        let name = &expr[locat..index];
+                        let name = &bytes[locat..index];
                         if let Some(&func_ptr) = MATH.get(name) {
                             self.function[self.bracket+1] = Some(func_ptr);
                         } else {
@@ -620,7 +638,7 @@ impl Calculator {
                 b')' => {
                     if matches!(self.state, State::Operator | State::Initial) {
                         if matches!(self.marker, Marker::Number) {
-                            self.numbers.push(extract(expr, locat, index)?);
+                            self.numbers.push(extract(bytes, &self.context, locat, index)?);
                             self.state = State::Operand;
                         }
                     }
@@ -632,7 +650,7 @@ impl Calculator {
                             }
                             if let Some(func) = self.function[self.bracket].take() {
                                 let value = self.numbers.pop().unwrap();
-                                self.numbers.push(func(value)?);
+                                self.numbers.push(func(value, &self.context)?);
                             }
                             locat = index + 1;
                             self.operator.pop();
@@ -644,7 +662,7 @@ impl Calculator {
                     return Err(CalcError::ExpressionError);
                 },
                 b'=' | b'\n' | b'\r' => {
-                    return self.finish(expr, locat, index);
+                    return self.finish(bytes, locat, index);
                 },
                 ch @ b'P' | ch @ b'Y' | ch @ b'C' | ch @ b'L' => {
                     if matches!(self.state, State::Operator | State::Initial) {
@@ -657,9 +675,9 @@ impl Calculator {
                         };
                         if !matches!(self.marker, Marker::Number | Marker::Func) {
                             let value = if matches!(self.marker, Marker::NegSub) {
-                                0.0 - Float::with_val(2560, constant)
+                                0.0 - Float::with_val(self.context.prec, constant)
                             } else {
-                                Float::with_val(2560, constant)
+                                Float::with_val(self.context.prec, constant)
                             };
                             self.numbers.push(value);
                             self.state = State::Operand;
@@ -673,7 +691,7 @@ impl Calculator {
                 _ => return Err(CalcError::OperatorUndefined),
             }
         }
-        self.finish(expr, locat, expr.len())
+        self.finish(bytes, locat, bytes.len())
     }
 
     /// Evaluates an expression and returns a formatted string.
@@ -683,12 +701,12 @@ impl Calculator {
     ///
     /// # Example
     /// ```
-    /// let mut calc = Calculator::new();
+    /// let mut calc = Calculator::new(2560);
     /// let s = calc.run_round("1/3", Some(5)).unwrap();
     /// assert_eq!(s, "0.33333");
     /// ```
 
-    pub fn run_round<S: AsRef<str>>(
+    pub fn run_round<S: AsRef<[u8]>>(
         &mut self, expr: S, digits: Option<usize>
     ) -> Result<String, CalcError> {
         match self.run(expr) {

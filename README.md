@@ -6,7 +6,7 @@ it delivers extreme accuracy and numerical stability with minimal memory overhea
 ## ✨ Features
 
 * 🚀 **High Performance**: Features a **non-recursive** architecture that evaluates expressions in a **single traversal**, ensuring predictable and blazing-fast execution.
-* ⚖️ **Arbitrary Precision**: Engineered with **2560-bit internal precision**, far exceeding the limitations of standard hardware floats for mission-critical calculations.
+* ⚖️ **User-Defined Precision**: Empowering users to specify custom **internal bit-depths**, transcending the limitations of standard hardware floats for mission-critical and research-grade calculations.
 * 📦 **Zero-Copy & Efficient**: Utilizes **byte-level scanning** and a custom **state-machine** to minimize memory allocations and CPU overhead during expression parsing.
 * 🧪 **Rich Mathematical Suite**: Supports **40+ built-in functions**, including advanced Trigonometry, Gamma, Zeta, Airy, and Error functions.
 * 🔭 **Scientific Constants**: Instant, high-precision access to fundamental constants: Pi (**P**), Euler (**Y**), Catalan (**C**), and Log2 (**L**).
@@ -18,7 +18,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rug_calc = "0.1.10"
+rug_calc = "0.1.11"
 ```
 
 ## 🛠️ Supported Syntax
@@ -55,7 +55,8 @@ The following example demonstrates how to use.
 ```rust
 use rug_calc::Calculator;
 
-let mut calc = Calculator::new();
+// Create a calculator instance with 2560-bit precision.
+let mut calc = Calculator::new(2560);
 
 // 1. Simple arithmetic with negative results
 let result = calc.run("8*(6+6/2-2*5)+-2").unwrap();
