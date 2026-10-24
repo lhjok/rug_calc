@@ -8,7 +8,7 @@ it delivers extreme accuracy and numerical stability with minimal memory overhea
 * 🚀 **High Performance**: Features a **non-recursive** architecture that evaluates expressions in a **single traversal**, ensuring predictable and blazing-fast execution.
 * ⚖️ **User-Defined Precision**: Empowering users to specify custom **internal bit-depths**, transcending the limitations of standard hardware floats for mission-critical and research-grade calculations.
 * 📦 **Zero-Copy & Efficient**: Utilizes **byte-level scanning** and a custom **state-machine** to minimize memory allocations and CPU overhead during expression parsing.
-* 🧪 **Rich Mathematical Suite**: Supports **40+ built-in functions**, including advanced Trigonometry, Gamma, Zeta, Airy, and Error functions.
+* 🧪 **Rich Mathematical Suite**: Supports **60+ built-in functions**, including advanced Trigonometry, Gamma, Zeta, Airy, and Error functions.
 * 🔭 **Scientific Constants**: Instant, high-precision access to fundamental constants: Pi (**P**), Euler (**Y**), Catalan (**C**), and Log2 (**L**).
 * 🎨 **Smart Formatting**: Provides versatile output options, including **fixed-point rounding** and **"clean" string formatting** with support for up to 700 decimal places.
 * 🛡️ **Robust Stability**: Designed for applications requiring **extreme numerical stability** and graceful error handling over panics.
@@ -18,7 +18,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rug_calc = "0.1.12"
+rug_calc = "0.1.13"
 ```
 
 ## 🛠️ Supported Syntax
@@ -34,7 +34,8 @@ rug_calc = "0.1.12"
 
 ## 📚 Mathematical Function Support
 `rug_calc` provides a comprehensive suite of arbitrary-precision functions powered by the MPFR library.
-* Advanced functions: `ai`, `abs`, `cos`, `sin`, `tan`, `csc`, `sec`, `cot`, `coth`, `ceil`, `cosh`, `sinh`, `tanh`, `sech`, `ln`, `csch`, `acos`, `asin`, `atan`, `acosh`, `asinh`, `atanh`, `log2`, `log10`, `sqrt`, `cbrt`, `fac`, `erf`, `li2`, `exp`, `exp2`, `exp10`, `eint`, `zeta`, `trunc`, `gamma`, `floor`, `frac`, `sgn`, `erfc`, `digamma`, `recip`
+* Advanced functions (Single-parameter): `ai`, `abs`, `cos`, `sin`, `tan`, `csc`, `sec`, `cot`, `coth`, `ceil`, `cosh`, `sinh`, `tanh`, `sech`, `ln`, `csch`, `acos`, `asin`, `atan`, `acosh`, `asinh`, `atanh`, `log_two`, `log_ten`, `sqrt`, `cbrt`, `fac`, `erf`, `li_two`, `exp`, `exp_two`, `exp_ten`, `eint`, `zeta`, `trunc`, `gamma`, `floor`, `fract`, `signum`, `erfc`, `digamma`, `recip`, `ln_gamma`, `j_zero`, `j_one`, `y_zero`, `y_one`, `square`
+* Advanced functions (Double-parameter): `root`, `max`, `min`, `sin_uint`, `atan_two`, `hypot`, `tan_uint`, `gamma_inc`, `positive_diff`, `remainder`, `root_int`, `agm`, `pow`, `jn`, `yn`, `copysign`
 * Supports scientific notation: Case-insensitive `e` or `E` is supported when preceded by a digit.
 
 ## 💎 Constant Identifiers
@@ -66,8 +67,10 @@ let result = calc.run("8*(6+6/2-2*5)+-2").unwrap();
 let sci_result = calc.run("1.23e-5*2").unwrap();
 println!("Scientific result: {}", sci_result);
 
-// 3. Advanced functions (Calculating cos(sin(π/4)))
+// 3.1 Advanced functions (Single-parameter)
 let cos_sin_pi_4 = calc.run("cos(sin(P/4))").unwrap();
+// 3.2 Advanced functions (Double-parameter)
+let atan_two = calc.run("atan_two(3.0, -4.0)").unwrap();
 
 // 4. Mixing Scientific Notation with Special Constants
 // Calculates: 5.0*10^12 divided by Euler's constant (Y)

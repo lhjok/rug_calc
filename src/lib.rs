@@ -8,7 +8,7 @@
 //! * **High Performance**: Non-recursive implementation, calculation completed in a single traversal.
 //! * **User-Defined Precision**: Empowering users to specify custom **internal bit-depths**, transcending
 //!     the limitations of standard hardware floats for mission-critical and research-grade calculations.
-//! * **Comprehensive Function Support**: Supports over 40 mathematical functions, including
+//! * **Comprehensive Function Support**: Supports over 60+ mathematical functions, including
 //!     trigonometry, hyperbolic functions, Gamma, Zeta, and Airy functions.
 //! * **Zero-Copy Logic**: Efficiently parses expressions using byte-level scanning and
 //!     state-machine logic to minimize overhead.
@@ -27,7 +27,8 @@
 //!
 //! ## Mathematical Function Support
 //! `rug_calc` provides a comprehensive suite of arbitrary-precision functions powered by the MPFR library.
-//! * Advanced functions: `ai`, `abs`, `cos`, `sin`, `tan`, `csc`, `sec`, `cot`, `coth`, `ceil`, `cosh`, `sinh`, `tanh`, `sech`, `ln`, `csch`, `acos`, `asin`, `atan`, `acosh`, `asinh`, `atanh`, `log2`, `log10`, `sqrt`, `cbrt`, `fac`, `erf`, `li2`, `exp`, `exp2`, `exp10`, `eint`, `zeta`, `trunc`, `gamma`, `floor`, `frac`, `sgn`, `erfc`, `digamma`, `recip`
+//! * Advanced functions (Single-parameter): `ai`, `abs`, `cos`, `sin`, `tan`, `csc`, `sec`, `cot`, `coth`, `ceil`, `cosh`, `sinh`, `tanh`, `sech`, `ln`, `ln_gamma`, `csch`, `acos`, `asin`, `atan`, `acosh`, `asinh`, `atanh`, `log_two`, `log_ten`, `sqrt`, `cbrt`, `fac`, `erf`, `li_two`, `exp`, `exp_two`, `exp_ten`, `eint`, `zeta`, `trunc`, `gamma`, `floor`, `fract`, `signum`, `erfc`, `digamma`, `recip`, `j_zero`, `j_one`, `y_zero`, `y_one`, `square`
+//! * Advanced functions (Double-parameter): `root`, `max`, `min`, `sin_uint`, `atan_two`, `hypot`, `tan_uint`, `gamma_inc`, `positive_diff`, `remainder`, `root_int`, `agm`, `pow`, `jn`, `yn`, `copysign`
 //! * Supports scientific notation: Case-insensitive `e` or `E` is supported when preceded by a digit.
 //!
 //! ## Constant Identifiers
@@ -59,8 +60,10 @@
 //! let sci_result = calc.run("1.23e-5*2").unwrap();
 //! println!("Scientific result: {}", sci_result);
 //!
-//! // 3. Advanced functions (Calculating cos(sin(π/4)))
+//! // 3.1 Advanced functions (Single-parameter)
 //! let cos_sin_pi_4 = calc.run("cos(sin(P/4))").unwrap();
+//! // 3.2 Advanced functions (Double-parameter)
+//! let atan_two = calc.run("atan_two(3.0, -4.0)").unwrap();
 //!
 //! // 4. Mixing Scientific Notation with Special Constants
 //! // Calculates: 5.0*10^12 divided by Euler's constant (Y)
@@ -131,10 +134,10 @@ pub enum CalcError {
     InvalidNumber,
 }
 
-type MathFn = fn(Float, &Context) -> Result<Float, CalcError>;
-static MATH: Map<&'static [u8], MathFn> = phf_map! {
+type MathFn1 = fn(Float, &Context) -> Result<Float, CalcError>;
+static MATH1: Map<&'static [u8], MathFn1> = phf_map! {
     b"ai" => |v, c| v.ai().accuracy(&c.max),
-    b"li" => |v, c| v.li2().accuracy(&c.max),
+    b"li_two" => |v, c| v.li2().accuracy(&c.max),
     b"erf" => |v, c| v.erf().accuracy(&c.max),
     b"erfc" => |v, c| v.erfc().accuracy(&c.max),
     b"abs" => |v, c| v.abs().accuracy(&c.max),
@@ -142,16 +145,16 @@ static MATH: Map<&'static [u8], MathFn> = phf_map! {
         Err(CalcError::ParameterError)
     } else { v.ln().accuracy(&c.max) },
     b"exp" => |v, c| v.exp().accuracy(&c.max),
-    b"expt" => |v, c| v.exp2().accuracy(&c.max),
-    b"expx" => |v, c| v.exp10().accuracy(&c.max),
+    b"exp_two" => |v, c| v.exp2().accuracy(&c.max),
+    b"exp_ten" => |v, c| v.exp10().accuracy(&c.max),
     b"trunc" => |v, c| v.trunc().accuracy(&c.max),
     b"zeta" => |v, c| if v == 1.0 {
         Err(CalcError::ParameterError)
     } else { v.zeta().accuracy(&c.max) },
-    b"gamma" => |v, c| if v == 0.0 {
+    b"gamma" => |v, c| if v <= 0.0 && v.clone().fract() == 0.0 {
         Err(CalcError::ParameterError)
     } else { v.gamma().accuracy(&c.max) },
-    b"digamma" => |v, c| if v == 0.0 {
+    b"digamma" => |v, c| if v <= 0.0 && v.clone().fract() == 0.0 {
         Err(CalcError::ParameterError)
     } else { v.digamma().accuracy(&c.max) },
     b"eint" => |v, c| if v == 0.0 {
@@ -160,7 +163,7 @@ static MATH: Map<&'static [u8], MathFn> = phf_map! {
     b"log" => |v, c| if v <= 0.0 {
         Err(CalcError::ParameterError)
     } else { v.log2().accuracy(&c.max) },
-    b"logx" => |v, c| if v <= 0.0 {
+    b"log_ten" => |v, c| if v <= 0.0 {
         Err(CalcError::ParameterError)
     } else { v.log10().accuracy(&c.max) },
     b"cos" => |v, c| v.cos().accuracy(&c.max),
@@ -178,8 +181,20 @@ static MATH: Map<&'static [u8], MathFn> = phf_map! {
     b"tanh" => |v, c| v.tanh().accuracy(&c.max),
     b"ceil" => |v, c| v.ceil().accuracy(&c.max),
     b"floor" => |v, c| v.floor().accuracy(&c.max),
-    b"frac" => |v, c| v.fract().accuracy(&c.max),
-    b"sgn" => |v, c| v.signum().accuracy(&c.max),
+    b"fract" => |v, c| v.fract().accuracy(&c.max),
+    b"signum" => |v, c| v.signum().accuracy(&c.max),
+    b"ln_gamma" => |v, c| if v <= 0.0 {
+        Err(CalcError::ParameterError)
+    } else { v.ln_gamma().accuracy(&c.max) },
+    b"j_zero" => |v, c| v.j0().accuracy(&c.max),
+    b"j_one" => |v, c| v.j1().accuracy(&c.max),
+    b"y_zero" => |v, c| if v <= 0.0 {
+        Err(CalcError::ParameterError)
+    } else { v.y0().accuracy(&c.max) },
+    b"y_one" => |v, c| if v <= 0.0 {
+        Err(CalcError::ParameterError)
+    } else { v.y1().accuracy(&c.max) },
+    b"square" => |v, c| v.square().accuracy(&c.max),
     b"recip" => |v, c| if v == 0.0 {
         Err(CalcError::ParameterError)
     } else { v.recip().accuracy(&c.max) },
@@ -209,9 +224,66 @@ static MATH: Map<&'static [u8], MathFn> = phf_map! {
         Err(CalcError::ParameterError)
     } else { v.sqrt().accuracy(&c.max) },
     b"fac" => |v, c| {
-        let to_u32 = v.to_u32_saturating().unwrap();
+        let to_u32 = v.to_u32_saturating()
+            .ok_or(CalcError::UnknownError)?;
         let fac = Float::factorial(to_u32);
         Float::with_val(c.prec, fac).accuracy(&c.max)
+    },
+};
+
+type MathFn2 = fn(Float, &Float, &Context) -> Result<Float, CalcError>;
+static MATH2: Map<&'static [u8], MathFn2> = phf_map! {
+    b"max" => |v1, v2, c| v1.max(v2).accuracy(&c.max),
+    b"min" => |v1, v2, c| v1.min(v2).accuracy(&c.max),
+    b"sin_uint" => |v1, v2, c| {
+        let to_u32 = v2.to_u32_saturating()
+            .ok_or(CalcError::UnknownError)?;
+        v1.sin_u(to_u32).accuracy(&c.max)
+    },
+    b"atan_two" => |v1, v2, c| v1.atan2(v2).accuracy(&c.max),
+    b"tan_uint" => |v1, v2, c| {
+        let to_u32 = v2.to_u32_saturating()
+            .ok_or(CalcError::UnknownError)?;
+        v1.tan_u(to_u32).accuracy(&c.max)
+    },
+    b"gamma_inc" => |v1, v2, c| if v1 <= 0.0 || *v2 < 0.0 {
+        Err(CalcError::ParameterError)
+    } else { v1.gamma_inc(v2).accuracy(&c.max) },
+    b"positive_diff" => |v1, v2, c| v1.positive_diff(v2).accuracy(&c.max),
+    b"remainder" => |v1, v2, c| if *v2 == 0.0 {
+        Err(CalcError::ParameterError)
+    } else { v1.remainder(v2).accuracy(&c.max) },
+    b"root_int" => |v1, v2, c| if *v2 == 0.0 {
+        Err(CalcError::ParameterError)
+    } else {
+        let to_i32 = v2.to_i32_saturating()
+            .ok_or(CalcError::UnknownError)?;
+        v1.root_i(to_i32).accuracy(&c.max)
+    },
+    b"hypot" => |v1, v2, c| v1.hypot(v2).accuracy(&c.max),
+    b"root" => |v1, v2, c| if *v2 <= 0.0 {
+        Err(CalcError::ParameterError)
+    } else {
+        let to_u32 = v2.to_u32_saturating()
+            .ok_or(CalcError::UnknownError)?;
+        v1.root(to_u32).accuracy(&c.max)
+    },
+    b"agm" => |v1, v2, c| if v1 < 0.0 || *v2 < 0.0 {
+        Err(CalcError::ParameterError)
+    } else { v1.agm(v2).accuracy(&c.max) },
+    b"pow" => |v1, v2, c| v1.pow(v2).accuracy(&c.max),
+    b"jn" => |v1, v2, c| {
+        let to_i32 = v2.to_i32_saturating()
+            .ok_or(CalcError::UnknownError)?;
+        v1.jn(to_i32).accuracy(&c.max)
+    },
+    b"copysign" => |v1, v2, c| v1.copysign(v2).accuracy(&c.max),
+    b"yn" => |v1, v2, c| if v1 <= 0.0 {
+        Err(CalcError::ParameterError)
+    } else {
+        let to_i32 = v2.to_i32_saturating()
+            .ok_or(CalcError::UnknownError)?;
+        v1.yn(to_i32).accuracy(&c.max)
     },
 };
 
@@ -238,7 +310,8 @@ pub struct Calculator {
     marker: Marker,
     context: Context,
     operator: Vec<u8>,
-    function: Vec<Option<MathFn>>,
+    function: Vec<(Option<MathFn1>, Option<MathFn2>)>,
+    parameter: Vec<Option<usize>>,
     numbers: Vec<Float>,
     bracket: usize,
     state: State,
@@ -425,7 +498,9 @@ impl StringExt for String {
             }
         }
         buf.truncate(final_len);
-        Ok(String::from_utf8(buf).unwrap())
+        let result = String::from_utf8(buf)
+            .map_err(|_| CalcError::UnknownError)?;
+        Ok(result)
     }
 
     fn to_fixed_round(&self, prec: i32) -> Result<String, CalcError> {
@@ -476,8 +551,10 @@ impl StringExt for String {
                 _ => break,
             }
         }
-        let result = final_buf[..final_len].to_vec();
-        Ok(String::from_utf8(result).unwrap())
+        let final_vec = final_buf[..final_len].to_vec();
+        let result = String::from_utf8(final_vec)
+            .map_err(|_| CalcError::UnknownError)?;
+        Ok(result)
     }
 }
 
@@ -514,8 +591,9 @@ impl Calculator {
             state: State::Initial,
             context: Context::new(prec),
             numbers: Vec::with_capacity(32),
-            function: vec![None; 32],
             operator: Vec::with_capacity(32),
+            function: vec![(None, None); 32],
+            parameter: vec![None; 32],
             marker: Marker::Init,
             bracket: 0,
         }
@@ -526,8 +604,9 @@ impl Calculator {
     pub fn reset(&mut self) {
         self.numbers.clear();
         self.state = State::Initial;
-        self.function.fill(None);
+        self.function.fill((None, None));
         self.marker = Marker::Init;
+        self.parameter.fill(None);
         self.operator.clear();
         self.bracket = 0;
     }
@@ -546,7 +625,8 @@ impl Calculator {
             let value = op.computing(self)?;
             self.numbers.push(value);
         }
-        let result = self.numbers.pop().unwrap();
+        let result = self.numbers.pop()
+            .ok_or(CalcError::UnknownError)?;
         self.reset(); Ok(result)
     }
 
@@ -564,7 +644,8 @@ impl Calculator {
     /// ```
 
     pub fn run<S: AsRef<[u8]>>(&mut self, expr: S) -> Result<Float, CalcError> {
-        let bytes = expr.as_ref();
+        let bytes: Vec<u8> = expr.as_ref().iter()
+            .copied().filter(|&b| b != b' ').collect();
         let mut locat: usize = 0;
         for (index, &valid) in bytes.iter().enumerate() {
             match valid {
@@ -575,7 +656,7 @@ impl Calculator {
                     }
                     return Err(CalcError::ExpressionError);
                 },
-                ch @ b'a'..=b'z' | ch @ b'E' => {
+                ch @ b'a'..=b'z' | ch @ b'E' | ch @ b'_' => {
                     if (ch == b'e' || ch == b'E') && matches!(self.marker, Marker::Number) {
                         continue;
                     } else if !matches!(self.marker, Marker::RParen | Marker::Const | Marker::NegSub | Marker::Number) {
@@ -598,12 +679,14 @@ impl Calculator {
                         return Err(CalcError::ExpressionError);
                     }
                     if matches!(self.state, State::Operator | State::Initial) {
-                        self.numbers.push(extract(bytes, &self.context, locat, index)?);
+                        self.numbers.push(extract(&bytes, &self.context, locat, index)?);
                         self.state = State::Operand;
                     }
                     while self.operator.len() != 0 && self.operator.last() != Some(&b'(') {
-                        if self.operator.last().unwrap().priority()? >= ch.priority()? {
-                            let value = self.operator.pop().unwrap().computing(self)?;
+                        let operator = self.operator.last().ok_or(CalcError::UnknownError)?;
+                        if operator.priority()? >= ch.priority()? {
+                            let value = self.operator.pop()
+                                .ok_or(CalcError::UnknownError)?.computing(self)?;
                             self.numbers.push(value);
                         } else {
                             break;
@@ -618,8 +701,12 @@ impl Calculator {
                 ch @ b'(' => {
                     if matches!(self.marker, Marker::Func) {
                         let name = &bytes[locat..index];
-                        if let Some(&func_ptr) = MATH.get(name) {
-                            self.function[self.bracket+1] = Some(func_ptr);
+                        if let Some(&func_ptr) = MATH1.get(name) {
+                            self.function[self.bracket+1] = (Some(func_ptr), None);
+                            self.parameter[self.bracket+1] = Some(1);
+                        } else if let Some(&func_ptr) = MATH2.get(name) {
+                            self.function[self.bracket+1] = (None, Some(func_ptr));
+                            self.parameter[self.bracket+1] = Some(1);
                         } else {
                             return Err(CalcError::FunctionUndefined);
                         }
@@ -635,22 +722,37 @@ impl Calculator {
                     }
                     return Err(CalcError::ExpressionError);
                 },
-                b')' => {
+                ch @ b')' | ch @ b',' => {
                     if matches!(self.state, State::Operator | State::Initial) {
                         if matches!(self.marker, Marker::Number) {
-                            self.numbers.push(extract(bytes, &self.context, locat, index)?);
+                            self.numbers.push(extract(&bytes, &self.context, locat, index)?);
                             self.state = State::Operand;
                         }
                     }
                     if matches!(self.state, State::Operand) {
                         if self.bracket > 0 {
                             while self.operator.last() != Some(&b'(') {
-                                let value = self.operator.pop().unwrap().computing(self)?;
+                                let value = self.operator.pop()
+                                    .ok_or(CalcError::UnknownError)?.computing(self)?;
                                 self.numbers.push(value);
                             }
-                            if let Some(func) = self.function[self.bracket].take() {
-                                let value = self.numbers.pop().unwrap();
-                                self.numbers.push(func(value, &self.context)?);
+                            if ch == b',' {
+                                self.parameter[self.bracket].map(|v| v + 1);
+                                continue;
+                            }
+                            if let Some(func) = self.function[self.bracket].0.take() {
+                                if self.parameter[self.bracket] == Some(1) {
+                                    let value = self.numbers.pop().ok_or(CalcError::UnknownError)?;
+                                    self.numbers.push(func(value, &self.context)?);
+                                    self.parameter[self.bracket] = None;
+                                } else { return Err(CalcError::ParameterError); }
+                            } else if let Some(func) = self.function[self.bracket].1.take() {
+                                if self.parameter[self.bracket] == Some(2) {
+                                    let value2 = self.numbers.pop().ok_or(CalcError::UnknownError)?;
+                                    let value1 = self.numbers.pop().ok_or(CalcError::UnknownError)?;
+                                    self.numbers.push(func(value1, &value2, &self.context)?);
+                                    self.parameter[self.bracket] = None;
+                                } else { return Err(CalcError::ParameterError); }
                             }
                             locat = index + 1;
                             self.operator.pop();
@@ -662,7 +764,7 @@ impl Calculator {
                     return Err(CalcError::ExpressionError);
                 },
                 b'=' | b'\n' | b'\r' => {
-                    return self.finish(bytes, locat, index);
+                    return self.finish(&bytes, locat, index);
                 },
                 ch @ b'P' | ch @ b'Y' | ch @ b'C' | ch @ b'L' => {
                     if matches!(self.state, State::Operator | State::Initial) {
@@ -691,7 +793,7 @@ impl Calculator {
                 _ => return Err(CalcError::OperatorUndefined),
             }
         }
-        self.finish(bytes, locat, bytes.len())
+        self.finish(&bytes, locat, bytes.len())
     }
 
     /// Evaluates an expression and returns a formatted string.
