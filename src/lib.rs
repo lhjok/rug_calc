@@ -27,8 +27,8 @@
 //!
 //! ## Mathematical Function Support
 //! `rug_calc` provides a comprehensive suite of arbitrary-precision functions powered by the MPFR library.
-//! * Advanced functions (Single-parameter): `ai`, `abs`, `cos`, `sin`, `tan`, `csc`, `sec`, `cot`, `coth`, `ceil`, `cosh`, `sinh`, `tanh`, `sech`, `ln`, `ln_gamma`, `csch`, `acos`, `asin`, `atan`, `acosh`, `asinh`, `atanh`, `log_two`, `log_ten`, `sqrt`, `cbrt`, `fac`, `erf`, `li_two`, `exp`, `exp_two`, `exp_ten`, `eint`, `zeta`, `trunc`, `gamma`, `floor`, `fract`, `signum`, `erfc`, `digamma`, `recip`, `j_zero`, `j_one`, `y_zero`, `y_one`, `square`
-//! * Advanced functions (Double-parameter): `root`, `max`, `min`, `sin_uint`, `atan_two`, `hypot`, `tan_uint`, `gamma_inc`, `positive_diff`, `remainder`, `root_int`, `agm`, `pow`, `jn`, `yn`, `copysign`
+//! * Advanced functions (Single-parameter): `ai`, `abs`, `cos`, `sin`, `tan`, `csc`, `sec`, `cot`, `coth`, `ceil`, `cosh`, `sinh`, `tanh`, `sech`, `ln`, `ln_gamma`, `csch`, `acos`, `asin`, `atan`, `acosh`, `asinh`, `atanh`, `log2`, `log10`, `sqrt`, `cbrt`, `fac`, `erf`, `li2`, `exp`, `exp2`, `exp10`, `eint`, `zeta`, `trunc`, `gamma`, `floor`, `fract`, `signum`, `erfc`, `digamma`, `recip`, `j0`, `j1`, `y0`, `y1`, `square`
+//! * Advanced functions (Double-parameter): `root`, `max`, `min`, `sinu`, `atan2`, `hypot`, `tanu`, `gamma_inc`, `positive_diff`, `remainder`, `rooti`, `agm`, `pow`, `jn`, `yn`, `copysign`
 //! * Supports scientific notation: Case-insensitive `e` or `E` is supported when preceded by a digit.
 //!
 //! ## Constant Identifiers
@@ -63,7 +63,7 @@
 //! // 3.1 Advanced functions (Single-parameter)
 //! let cos_sin_pi_4 = calc.run("cos(sin(P/4))").unwrap();
 //! // 3.2 Advanced functions (Double-parameter)
-//! let atan_two = calc.run("atan_two(3.0, -4.0)").unwrap();
+//! let atan2 = calc.run("atan2(3.0, -4.0)").unwrap();
 //!
 //! // 4. Mixing Scientific Notation with Special Constants
 //! // Calculates: 5.0*10^12 divided by Euler's constant (Y)
@@ -138,7 +138,7 @@ pub enum CalcError {
 type MathFn1 = fn(Float, &Context) -> Result<Float, CalcError>;
 static MATH1: Map<&'static [u8], MathFn1> = phf_map! {
     b"ai" => |v, c| v.ai().accuracy(&c.max),
-    b"li_two" => |v, c| v.li2().accuracy(&c.max),
+    b"li2" => |v, c| v.li2().accuracy(&c.max),
     b"erf" => |v, c| v.erf().accuracy(&c.max),
     b"erfc" => |v, c| v.erfc().accuracy(&c.max),
     b"abs" => |v, c| v.abs().accuracy(&c.max),
@@ -146,8 +146,8 @@ static MATH1: Map<&'static [u8], MathFn1> = phf_map! {
         Err(CalcError::ParameterError)
     } else { v.ln().accuracy(&c.max) },
     b"exp" => |v, c| v.exp().accuracy(&c.max),
-    b"exp_two" => |v, c| v.exp2().accuracy(&c.max),
-    b"exp_ten" => |v, c| v.exp10().accuracy(&c.max),
+    b"exp2" => |v, c| v.exp2().accuracy(&c.max),
+    b"exp10" => |v, c| v.exp10().accuracy(&c.max),
     b"trunc" => |v, c| v.trunc().accuracy(&c.max),
     b"zeta" => |v, c| if v == 1.0 {
         Err(CalcError::ParameterError)
@@ -164,7 +164,7 @@ static MATH1: Map<&'static [u8], MathFn1> = phf_map! {
     b"log" => |v, c| if v <= 0.0 {
         Err(CalcError::ParameterError)
     } else { v.log2().accuracy(&c.max) },
-    b"log_ten" => |v, c| if v <= 0.0 {
+    b"log10" => |v, c| if v <= 0.0 {
         Err(CalcError::ParameterError)
     } else { v.log10().accuracy(&c.max) },
     b"cos" => |v, c| v.cos().accuracy(&c.max),
@@ -187,12 +187,12 @@ static MATH1: Map<&'static [u8], MathFn1> = phf_map! {
     b"ln_gamma" => |v, c| if v <= 0.0 {
         Err(CalcError::ParameterError)
     } else { v.ln_gamma().accuracy(&c.max) },
-    b"j_zero" => |v, c| v.j0().accuracy(&c.max),
-    b"j_one" => |v, c| v.j1().accuracy(&c.max),
-    b"y_zero" => |v, c| if v <= 0.0 {
+    b"j0" => |v, c| v.j0().accuracy(&c.max),
+    b"j1" => |v, c| v.j1().accuracy(&c.max),
+    b"y0" => |v, c| if v <= 0.0 {
         Err(CalcError::ParameterError)
     } else { v.y0().accuracy(&c.max) },
-    b"y_one" => |v, c| if v <= 0.0 {
+    b"y1" => |v, c| if v <= 0.0 {
         Err(CalcError::ParameterError)
     } else { v.y1().accuracy(&c.max) },
     b"square" => |v, c| v.square().accuracy(&c.max),
@@ -236,13 +236,13 @@ type MathFn2 = fn(Float, &Float, &Context) -> Result<Float, CalcError>;
 static MATH2: Map<&'static [u8], MathFn2> = phf_map! {
     b"max" => |v1, v2, c| v1.max(v2).accuracy(&c.max),
     b"min" => |v1, v2, c| v1.min(v2).accuracy(&c.max),
-    b"sin_uint" => |v1, v2, c| {
+    b"sinu" => |v1, v2, c| {
         let to_u32 = v2.to_u32_saturating()
             .ok_or(CalcError::UnknownError)?;
         v1.sin_u(to_u32).accuracy(&c.max)
     },
-    b"atan_two" => |v1, v2, c| v1.atan2(v2).accuracy(&c.max),
-    b"tan_uint" => |v1, v2, c| {
+    b"atan2" => |v1, v2, c| v1.atan2(v2).accuracy(&c.max),
+    b"tanu" => |v1, v2, c| {
         let to_u32 = v2.to_u32_saturating()
             .ok_or(CalcError::UnknownError)?;
         v1.tan_u(to_u32).accuracy(&c.max)
@@ -254,7 +254,7 @@ static MATH2: Map<&'static [u8], MathFn2> = phf_map! {
     b"remainder" => |v1, v2, c| if *v2 == 0.0 {
         Err(CalcError::ParameterError)
     } else { v1.remainder(v2).accuracy(&c.max) },
-    b"root_int" => |v1, v2, c| if *v2 == 0.0 {
+    b"rooti" => |v1, v2, c| if *v2 == 0.0 {
         Err(CalcError::ParameterError)
     } else {
         let to_i32 = v2.to_i32_saturating()
@@ -651,7 +651,9 @@ impl Calculator {
         for (index, &valid) in bytes.iter().enumerate() {
             match valid {
                 b'0'..=b'9' | b'.' => {
-                    if !matches!(self.marker, Marker::RParen | Marker::Const | Marker::Func) {
+                    if matches!(self.marker, Marker::Func) {
+                        continue;
+                    } else if !matches!(self.marker, Marker::RParen | Marker::Const | Marker::Func) {
                         self.marker = Marker::Number;
                         continue;
                     }

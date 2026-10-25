@@ -34,8 +34,8 @@ rug_calc = "0.1.13"
 
 ## 📚 Mathematical Function Support
 `rug_calc` provides a comprehensive suite of arbitrary-precision functions powered by the MPFR library.
-* Advanced functions (Single-parameter): `ai`, `abs`, `cos`, `sin`, `tan`, `csc`, `sec`, `cot`, `coth`, `ceil`, `cosh`, `sinh`, `tanh`, `sech`, `ln`, `csch`, `acos`, `asin`, `atan`, `acosh`, `asinh`, `atanh`, `log_two`, `log_ten`, `sqrt`, `cbrt`, `fac`, `erf`, `li_two`, `exp`, `exp_two`, `exp_ten`, `eint`, `zeta`, `trunc`, `gamma`, `floor`, `fract`, `signum`, `erfc`, `digamma`, `recip`, `ln_gamma`, `j_zero`, `j_one`, `y_zero`, `y_one`, `square`
-* Advanced functions (Double-parameter): `root`, `max`, `min`, `sin_uint`, `atan_two`, `hypot`, `tan_uint`, `gamma_inc`, `positive_diff`, `remainder`, `root_int`, `agm`, `pow`, `jn`, `yn`, `copysign`
+* Advanced functions (Single-parameter): `ai`, `abs`, `cos`, `sin`, `tan`, `csc`, `sec`, `cot`, `coth`, `ceil`, `cosh`, `sinh`, `tanh`, `sech`, `ln`, `csch`, `acos`, `asin`, `atan`, `acosh`, `asinh`, `atanh`, `log2`, `log10`, `sqrt`, `cbrt`, `fac`, `erf`, `li2`, `exp`, `exp2`, `exp10`, `eint`, `zeta`, `trunc`, `gamma`, `floor`, `fract`, `signum`, `erfc`, `digamma`, `recip`, `ln_gamma`, `j0`, `j1`, `y0`, `y1`, `square`
+* Advanced functions (Double-parameter): `root`, `max`, `min`, `sinu`, `atan2`, `hypot`, `tanu`, `gamma_inc`, `positive_diff`, `remainder`, `rooti`, `agm`, `pow`, `jn`, `yn`, `copysign`
 * Supports scientific notation: Case-insensitive `e` or `E` is supported when preceded by a digit.
 
 ## 💎 Constant Identifiers
@@ -70,7 +70,7 @@ println!("Scientific result: {}", sci_result);
 // 3.1 Advanced functions (Single-parameter)
 let cos_sin_pi_4 = calc.run("cos(sin(P/4))").unwrap();
 // 3.2 Advanced functions (Double-parameter)
-let atan_two = calc.run("atan_two(3.0, -4.0)").unwrap();
+let atan2 = calc.run("atan2(3.0, -4.0)").unwrap();
 
 // 4. Mixing Scientific Notation with Special Constants
 // Calculates: 5.0*10^12 divided by Euler's constant (Y)
