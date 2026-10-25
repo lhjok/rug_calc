@@ -95,6 +95,7 @@ enum Marker {
     NegSub,
     LParen,
     RParen,
+    Comma,
     Char,
     Const,
     Func,
@@ -672,7 +673,7 @@ impl Calculator {
                             continue;
                         }
                     }
-                    if ch == b'-' && matches!(self.marker, Marker::Init | Marker::LParen | Marker::Char) {
+                    if ch == b'-' && matches!(self.marker, Marker::Init | Marker::LParen | Marker::Char | Marker::Comma) {
                         self.marker = Marker::NegSub;
                         continue;
                     } else if !matches!(self.marker, Marker::Number | Marker::RParen | Marker::Const) {
@@ -737,7 +738,11 @@ impl Calculator {
                                 self.numbers.push(value);
                             }
                             if ch == b',' {
-                                self.parameter[self.bracket].map(|v| v + 1);
+                                let increment = self.parameter[self.bracket].map(|v| v + 1);
+                                self.parameter[self.bracket] = increment;
+                                self.state = State::Initial;
+                                self.marker = Marker::Comma;
+                                locat = index + 1;
                                 continue;
                             }
                             if let Some(func) = self.function[self.bracket].0.take() {
