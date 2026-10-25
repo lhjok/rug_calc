@@ -161,7 +161,7 @@ static MATH1: Map<&'static [u8], MathFn1> = phf_map! {
     b"eint" => |v, c| if v == 0.0 {
         Err(CalcError::ParameterError)
     } else { v.eint().accuracy(&c.max) },
-    b"log" => |v, c| if v <= 0.0 {
+    b"log2" => |v, c| if v <= 0.0 {
         Err(CalcError::ParameterError)
     } else { v.log2().accuracy(&c.max) },
     b"log10" => |v, c| if v <= 0.0 {
