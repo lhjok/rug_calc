@@ -13,7 +13,7 @@
 //! * **Zero-Copy Logic**: Efficiently parses expressions using byte-level scanning and
 //!     state-machine logic to minimize overhead.
 //!     ensuring safe integration into production systems.
-//! * **Non-recursive infinite nesting**: Fully supports arbitrarily deep nesting of parentheses,
+//! * **Non-Recursive Infinite Nesting**: Fully supports arbitrarily deep nesting of parentheses,
 //!     functions, and **multi-parameter** combinations, handles all valid mathematical nested structures,
 //!     and fundamentally eliminates the hidden hazard of call stack overflows.
 //!

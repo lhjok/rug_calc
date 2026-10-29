@@ -12,7 +12,7 @@ it delivers extreme accuracy and numerical stability with minimal memory overhea
 * 🔭 **Scientific Constants**: Instant, high-precision access to fundamental constants: Pi (**P**), Euler (**Y**), Catalan (**C**), and Log2 (**L**).
 * 🎨 **Smart Formatting**: Provides versatile output options, including **fixed-point rounding** and **"clean" string formatting** with support for up to 700 decimal places.
 * 🛡️ **Robust Stability**: Designed for applications requiring **extreme numerical stability** and graceful error handling over panics.
-* 🪆 **Non-recursive infinite nesting**: Fully supports arbitrarily deep nesting of parentheses, functions, and **multi-parameter** combinations, handles all valid mathematical nested structures, and fundamentally eliminates the hidden hazard of call stack overflows.
+* 🪆 **Non-Recursive Infinite Nesting**: Fully supports arbitrarily deep nesting of parentheses, functions, and **multi-parameter** combinations, handles all valid mathematical nested structures, and fundamentally eliminates the hidden hazard of call stack overflows.
 
 ## 🚀 Quick Start
 Add this to your `Cargo.toml`:
