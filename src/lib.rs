@@ -13,6 +13,9 @@
 //! * **Zero-Copy Logic**: Efficiently parses expressions using byte-level scanning and
 //!     state-machine logic to minimize overhead.
 //!     ensuring safe integration into production systems.
+//! * **Non-recursive infinite nesting**: Fully supports arbitrarily deep nesting of parentheses,
+//!     functions, and **multi-parameter** combinations, handles all valid mathematical nested structures,
+//!     and fundamentally eliminates the hidden hazard of call stack overflows.
 //!
 //! ## Supported Syntax
 //! `rug_calc` utilizes a state-machine parser to handle complex mathematical structures without recursion:
