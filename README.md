@@ -11,15 +11,15 @@ it delivers extreme accuracy and numerical stability with minimal memory overhea
 * 🧪 **Rich Mathematical Suite**: Supports **60+ built-in functions**, including advanced Trigonometry, Gamma, Zeta, Airy, and Error functions.
 * 🔭 **Scientific Constants**: Instant, high-precision access to fundamental constants: Pi (**P**), Euler (**Y**), Catalan (**C**), and Log2 (**L**).
 * 🎨 **Smart Formatting**: Provides versatile output options, including **fixed-point rounding** and **"clean" string formatting** with support for up to 700 decimal places.
-* 🛡️ **Robust Stability**: Designed for applications requiring **extreme numerical stability** and graceful error handling over panics.
 * 🪆 **Non-Recursive Infinite Nesting**: Fully supports arbitrarily deep nesting of parentheses, functions, and **multi-parameter** combinations, handles all valid mathematical nested structures, and fundamentally eliminates the hidden hazard of call stack overflows.
+* 🛡️ **Robust Stability**: Designed for applications requiring **extreme numerical stability** and graceful error handling over panics.
 
 ## 🚀 Quick Start
 Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rug_calc = "0.1.13"
+rug_calc = "0.1.14"
 ```
 
 ## 🛠️ Supported Syntax
