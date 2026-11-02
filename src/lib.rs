@@ -24,7 +24,7 @@
 //! * Exponentiation (power): `^`
 //! * Unlimited nesting depth for grouped expressions: `()`,
 //! * Scientific notation: `1.23e-5`, `1.23E-5`, `1.23e+5`, `1.23E5`
-//! * Constant Identifiers: `P`, `Y`, `C`, `L`
+//! * Constant Identifiers: `P`, `Y`, `G`, `L`
 //! * Operator Distinction: Automatically differentiates between as a negative sign and as a subtraction operator based on context. `0-5` vs. `-5`
 //! * Supports scientific notation: Case-insensitive `e` or `E` is supported when preceded by a digit.
 //!
@@ -38,7 +38,7 @@
 //! To maintain parsing efficiency and avoid ambiguity with functions, constants use single-character uppercase identifiers:
 //! * `P`: Pi constant
 //! * `Y`: Euler-Mascheroni constant
-//! * `C`: Catalan’s constant
+//! * `G`: Catalan’s constant
 //! * `L`: Natural logarithm of 2 (Log2)
 //!
 //! ## Intelligent Sign Recognition
@@ -639,7 +639,7 @@ impl Calculator {
     /// # Supported Syntax
     /// - Basic: `+`, `-`, `*`, `/`, `%`, `^`
     /// - Functions: `sin(x)`, `ln(x)`, `fac(x)` (factorial), etc.
-    /// - Constants: `P` (Pi), `Y` (Euler), `C` (Catalan), `L` (Log2)
+    /// - Constants: `P` (Pi), `Y` (Euler), `G` (Catalan), `L` (Log2)
     ///
     /// # Examples
     /// ```
@@ -776,12 +776,12 @@ impl Calculator {
                 b'=' | b'\n' | b'\r' => {
                     return self.finish(&bytes, locat, index);
                 },
-                ch @ b'P' | ch @ b'Y' | ch @ b'C' | ch @ b'L' => {
+                ch @ b'P' | ch @ b'Y' | ch @ b'G' | ch @ b'L' => {
                     if matches!(self.state, State::Operator | State::Initial) {
                         let constant = match ch {
                             b'P' => &Constant::Pi,
                             b'Y' => &Constant::Euler,
-                            b'C' => &Constant::Catalan,
+                            b'G' => &Constant::Catalan,
                             b'L' => &Constant::Log2,
                             _ => return Err(CalcError::UnknownError)
                         };

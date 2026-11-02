@@ -9,7 +9,7 @@ it delivers extreme accuracy and numerical stability with minimal memory overhea
 * ⚖️ **User-Defined Precision**: Empowering users to specify custom **internal bit-depths**, transcending the limitations of standard hardware floats for mission-critical and research-grade calculations.
 * 📦 **Zero-Copy & Efficient**: Utilizes **byte-level scanning** and a custom **state-machine** to minimize memory allocations and CPU overhead during expression parsing.
 * 🧪 **Rich Mathematical Suite**: Supports **60+ built-in functions**, including advanced Trigonometry, Gamma, Zeta, Airy, and Error functions.
-* 🔭 **Scientific Constants**: Instant, high-precision access to fundamental constants: Pi (**P**), Euler (**Y**), Catalan (**C**), and Log2 (**L**).
+* 🔭 **Scientific Constants**: Instant, high-precision access to fundamental constants: Pi (**P**), Euler (**Y**), Catalan (**G**), and Log2 (**L**).
 * 🎨 **Smart Formatting**: Provides versatile output options, including **fixed-point rounding** and **"clean" string formatting** with support for up to 700 decimal places.
 * 🪆 **Non-Recursive Infinite Nesting**: Fully supports arbitrarily deep nesting of parentheses, functions, and **multi-parameter** combinations, handles all valid mathematical nested structures, and fundamentally eliminates the hidden hazard of call stack overflows.
 * 🛡️ **Robust Stability**: Designed for applications requiring **extreme numerical stability** and graceful error handling over panics.
@@ -19,7 +19,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rug_calc = "0.1.14"
+rug_calc = "0.1.15"
 ```
 
 ## 🛠️ Supported Syntax
@@ -29,7 +29,7 @@ rug_calc = "0.1.14"
 * Exponentiation (power): `^`
 * Unlimited nesting depth for grouped expressions: `()`,
 * Scientific notation: `1.23e-5`, `1.23E-5`, `1.23e+5`, `1.23E5`
-* Constant Identifiers: `P`, `Y`, `C`, `L`
+* Constant Identifiers: `P`, `Y`, `G`, `L`
 * Operator Distinction: Automatically differentiates between as a negative sign and as a subtraction operator based on context. `0-5` vs. `-5`
 * Supports scientific notation: Case-insensitive `e` or `E` is supported when preceded by a digit.
 
@@ -43,7 +43,7 @@ rug_calc = "0.1.14"
 To maintain parsing efficiency and avoid ambiguity with functions, constants use single-character uppercase identifiers:
 * `P`: Pi constant
 * `Y`: Euler-Mascheroni constant
-* `C`: Catalan’s constant
+* `G`: Catalan’s constant
 * `L`: Natural logarithm of 2 (Log2)
 
 ## 🧠 Intelligent Sign Recognition

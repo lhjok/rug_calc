@@ -111,7 +111,7 @@ dependencies = [
 
 [[package]]
 name = "rug_calc"
-version = "0.1.14"
+version = "0.1.15"
 dependencies = [
  "phf",
  "rug",
