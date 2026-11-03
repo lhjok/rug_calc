@@ -838,7 +838,7 @@ impl Calculator {
     ) -> Result<String, CalcError> {
         match self.run(expr) {
             Ok(value) => Ok(value.to_round(digits)?),
-            Err(err) => Err(err)
+            Err(err) => { self.reset(); Err(err) }
         }
     }
 }
