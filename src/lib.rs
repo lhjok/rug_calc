@@ -231,7 +231,7 @@ static MATH1: Map<&'static [u8], MathFn1> = phf_map! {
         let to_u32 = v.to_u32_saturating()
             .ok_or(CalcError::UnknownError)?;
         let max_allowed = std::cmp::min(
-            5000, 200+((c.prec/64)*200));
+            5000, 100+((c.prec/64)*100));
         if to_u32 > max_allowed {
             return Err(CalcError::ParameterError);
         }
