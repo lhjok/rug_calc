@@ -230,6 +230,11 @@ static MATH1: Map<&'static [u8], MathFn1> = phf_map! {
     b"fac" => |v, c| {
         let to_u32 = v.to_u32_saturating()
             .ok_or(CalcError::UnknownError)?;
+        let max_allowed = std::cmp::min(
+            5000, 200+((c.prec/64)*200));
+        if to_u32 > max_allowed {
+            return Err(CalcError::ParameterError);
+        }
         let fac = Float::factorial(to_u32);
         Float::with_val(c.prec, fac).accuracy(&c.max)
     },
@@ -514,10 +519,11 @@ impl StringExt for String {
         if round_idx < digits.len() && digits[round_idx] >= b'5' {
             carry = true;
         }
-        let mut buf = [b'0'; 4096];
-        let mut cursor = 4095;
         let max_bound = (exp+prec)-1;
         let min_bound = std::cmp::min(0, exp-1);
+        let capacity = ((max_bound-min_bound).max(0) as usize)+9;
+        let mut buf = [b'0'; capacity];
+        let mut cursor = capacity-1;
         for index in (min_bound..=max_bound).rev() {
             if index == exp-1 && prec > 0 {
                 buf[cursor] = b'.';
@@ -546,7 +552,7 @@ impl StringExt for String {
             buf[cursor] = b'-';
             cursor -= 1;
         }
-        let final_buf = &buf[cursor+1..4096];
+        let final_buf = &buf[cursor+1..capacity];
         let mut final_len = final_buf.len();
         for index in final_buf.iter().rev() {
             match index {
@@ -613,6 +619,13 @@ impl Calculator {
         self.parameter.fill(None);
         self.operator.clear();
         self.bracket = 0;
+    }
+
+    fn is_resize(&mut self, target_idx: usize) {
+        if target_idx >= self.function.len() {
+            self.function.resize(target_idx+16, (None, None));
+            self.parameter.resize(target_idx+16, None);
+        }
     }
 
     fn finish(&mut self, expr: &[u8], locat: usize, end_idx: usize) -> Result<Float, CalcError> {
@@ -707,12 +720,15 @@ impl Calculator {
                 ch @ b'(' => {
                     if matches!(self.marker, Marker::Func) {
                         let name = &bytes[locat..index];
+                        let target_idx = self.bracket + 1;
                         if let Some(&func_ptr) = MATH1.get(name) {
-                            self.function[self.bracket+1] = (Some(func_ptr), None);
-                            self.parameter[self.bracket+1] = Some(1);
+                            self.is_resize(target_idx);
+                            self.function[target_idx] = (Some(func_ptr), None);
+                            self.parameter[target_idx] = Some(1);
                         } else if let Some(&func_ptr) = MATH2.get(name) {
-                            self.function[self.bracket+1] = (None, Some(func_ptr));
-                            self.parameter[self.bracket+1] = Some(1);
+                            self.is_resize(target_idx);
+                            self.function[target_idx] = (None, Some(func_ptr));
+                            self.parameter[target_idx] = Some(1);
                         } else {
                             return Err(CalcError::FunctionUndefined);
                         }

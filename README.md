@@ -19,7 +19,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rug_calc = "0.1.15"
+rug_calc = "0.1.16"
 ```
 
 ## 🛠️ Supported Syntax
@@ -37,7 +37,6 @@ rug_calc = "0.1.15"
 `rug_calc` provides a comprehensive suite of arbitrary-precision functions powered by the MPFR library.
 * Advanced functions (Single-parameter): `ai`, `abs`, `cos`, `sin`, `tan`, `csc`, `sec`, `cot`, `coth`, `ceil`, `cosh`, `sinh`, `tanh`, `sech`, `ln`, `csch`, `acos`, `asin`, `atan`, `acosh`, `asinh`, `atanh`, `log2`, `log10`, `sqrt`, `cbrt`, `fac`, `erf`, `li2`, `exp`, `exp2`, `exp10`, `eint`, `zeta`, `trunc`, `gamma`, `floor`, `fract`, `signum`, `erfc`, `digamma`, `recip`, `ln_gamma`, `j0`, `j1`, `y0`, `y1`, `square`
 * Advanced functions (Double-parameter): `root`, `max`, `min`, `sinu`, `atan2`, `hypot`, `tanu`, `gamma_inc`, `positive_diff`, `remainder`, `rooti`, `agm`, `pow`, `jn`, `yn`, `copysign`
-* Supports scientific notation: Case-insensitive `e` or `E` is supported when preceded by a digit.
 
 ## 💎 Constant Identifiers
 To maintain parsing efficiency and avoid ambiguity with functions, constants use single-character uppercase identifiers:
