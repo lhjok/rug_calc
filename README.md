@@ -58,6 +58,7 @@ use rug_calc::Calculator;
 
 // Create a calculator instance with 2560-bit precision.
 let mut calc = Calculator::new(2560);
+calc.set_filter(true);  // Enable whitespace filtering
 
 // 1. Simple arithmetic with negative results
 let result = calc.run("8*(6+6/2-2*5)+-2").unwrap();

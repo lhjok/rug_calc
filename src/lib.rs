@@ -53,6 +53,7 @@
 //!
 //! // Create a calculator instance with 2560-bit precision.
 //! let mut calc = Calculator::new(2560);
+//! calc.set_filter(true);  // Enable whitespace filtering
 //!
 //! // 1. Simple arithmetic with negative results
 //! let result = calc.run("8*(6+6/2-2*5)+-2").unwrap();
@@ -322,6 +323,7 @@ pub struct Calculator {
     parameter: Vec<Option<usize>>,
     numbers: Vec<Float>,
     bracket: usize,
+    filter: bool,
     state: State,
 }
 
@@ -604,13 +606,34 @@ impl Calculator {
             function: vec![(None, None); 32],
             parameter: vec![None; 32],
             marker: Marker::Init,
+            filter: false,
             bracket: 0,
         }
     }
 
-    /// Resets the internal state and clears all stacks.
-    /// Useful for reusing the same instance for a new calculation.
-    pub fn reset(&mut self) {
+    /// Sets whether to filter or skip whitespace and control characters during parsing.
+    /// By default, whitespace is not filtered.
+    pub fn set_filter(&mut self, filter: bool) -> &mut Self {
+        self.filter = filter; self
+    }
+
+    /// Pre-allocates capacity for the numbers stack to avoid frequent reallocations.
+    pub fn set_numbers_size(&mut self, size: usize) -> &mut Self {
+        self.numbers = Vec::with_capacity(size); self
+    }
+
+    /// Pre-allocates capacity for the operator stack to avoid frequent reallocations.
+    pub fn set_operator_size(&mut self, size: usize) -> &mut Self {
+        self.operator = Vec::with_capacity(size); self
+    }
+
+    /// Resizes and initializes the function and parameter storage vectors to the specified size.
+    pub fn set_function_size(&mut self, size: usize) -> &mut Self {
+        self.function = vec![(None, None); size];
+        self.parameter = vec![None; size]; self
+    }
+
+    fn reset(&mut self) {
         self.numbers.clear();
         self.state = State::Initial;
         self.function.fill((None, None));
@@ -622,8 +645,9 @@ impl Calculator {
 
     fn is_resize(&mut self, target_idx: usize) {
         if target_idx >= self.function.len() {
-            self.function.resize(target_idx+16, (None, None));
-            self.parameter.resize(target_idx+16, None);
+            let len = self.function.len();
+            self.function.resize(target_idx+(len/2), (None, None));
+            self.parameter.resize(target_idx+(len/2), None);
         }
     }
 
@@ -646,22 +670,7 @@ impl Calculator {
         self.reset(); Ok(result)
     }
 
-    /// Evaluates a mathematical expression and returns the raw `rug::Float` result.
-    ///
-    /// # Supported Syntax
-    /// - Basic: `+`, `-`, `*`, `/`, `%`, `^`
-    /// - Functions: `sin(x)`, `ln(x)`, `fac(x)` (factorial), etc.
-    /// - Constants: `P` (Pi), `Y` (Euler), `G` (Catalan), `L` (Log2)
-    ///
-    /// # Examples
-    /// ```
-    /// let mut calc = Calculator::new(2560);
-    /// let res = calc.run("cos(sin(P/4))").unwrap();
-    /// ```
-
-    pub fn run<S: AsRef<[u8]>>(&mut self, expr: S) -> Result<Float, CalcError> {
-        let bytes: Vec<u8> = expr.as_ref().iter()
-            .copied().filter(|&b| b != b' ').collect();
+    fn parse(&mut self, bytes: &[u8]) -> Result<Float, CalcError> {
         let mut locat: usize = 0;
         for (index, &valid) in bytes.iter().enumerate() {
             match valid {
@@ -697,7 +706,7 @@ impl Calculator {
                         return Err(CalcError::ExpressionError);
                     }
                     if matches!(self.state, State::Operator | State::Initial) {
-                        self.numbers.push(extract(&bytes, &self.context, locat, index)?);
+                        self.numbers.push(extract(bytes, &self.context, locat, index)?);
                         self.state = State::Operand;
                     }
                     while self.operator.len() != 0 && self.operator.last() != Some(&b'(') {
@@ -746,7 +755,7 @@ impl Calculator {
                 ch @ b')' | ch @ b',' => {
                     if matches!(self.state, State::Operator | State::Initial) {
                         if matches!(self.marker, Marker::Number) {
-                            self.numbers.push(extract(&bytes, &self.context, locat, index)?);
+                            self.numbers.push(extract(bytes, &self.context, locat, index)?);
                             self.state = State::Operand;
                         }
                     }
@@ -788,9 +797,7 @@ impl Calculator {
                     }
                     return Err(CalcError::ExpressionError);
                 },
-                b'=' | b'\n' | b'\r' => {
-                    return self.finish(&bytes, locat, index);
-                },
+                b'=' => return self.finish(bytes, locat, index),
                 ch @ b'P' | ch @ b'Y' | ch @ b'G' | ch @ b'L' => {
                     if matches!(self.state, State::Operator | State::Initial) {
                         let constant = match ch {
@@ -818,7 +825,30 @@ impl Calculator {
                 _ => return Err(CalcError::OperatorUndefined),
             }
         }
-        self.finish(&bytes, locat, bytes.len())
+        self.finish(bytes, locat, bytes.len())
+    }
+
+    /// Evaluates a mathematical expression and returns the raw `rug::Float` result.
+    ///
+    /// # Supported Syntax
+    /// - Basic: `+`, `-`, `*`, `/`, `%`, `^`
+    /// - Functions: `sin(x)`, `ln(x)`, `fac(x)` (factorial), etc.
+    /// - Constants: `P` (Pi), `Y` (Euler), `G` (Catalan), `L` (Log2)
+    ///
+    /// # Examples
+    /// ```
+    /// let mut calc = Calculator::new(2560);
+    /// let res = calc.run("cos(sin(P/4))").unwrap();
+    /// ```
+
+    pub fn run<S: AsRef<[u8]>>(&mut self, expr: S) -> Result<Float, CalcError> {
+        let new_expr = if self.filter {
+            let vec_expr: Vec<u8> = expr.as_ref().iter()
+                .copied().filter(|&b| !b.is_ascii_whitespace()).collect();
+            vec_expr.as_ref() } else { expr.as_ref() };
+        self.parse(new_expr).map_err(|error| {
+            self.reset(); error
+        })
     }
 
     /// Evaluates an expression and returns a formatted string.
@@ -838,7 +868,7 @@ impl Calculator {
     ) -> Result<String, CalcError> {
         match self.run(expr) {
             Ok(value) => Ok(value.to_round(digits)?),
-            Err(err) => { self.reset(); Err(err) }
+            Err(err) => Err(err)
         }
     }
 }
