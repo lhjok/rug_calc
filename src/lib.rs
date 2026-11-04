@@ -415,8 +415,8 @@ impl FloatExt for Float {
 
     fn to_round(&self, digits: Option<usize>) -> Result<String, CalcError> {
         if let Some(precision) = digits {
-            if precision < 1 || precision > 700 {
-                let err = String::from("Set Precision Greater Than Equal 1");
+            if precision < 1 || precision > 10000 {
+                let err = String::from("Set Precision: ≥ 1 or < 10000");
                 return Err(CalcError::Custom(err));
             }
         }
@@ -453,10 +453,17 @@ impl StringExt for String {
 
     fn to_fixed_clean(&self) -> Result<String, CalcError> {
         let (negative, digits, exp) = self.parse_rug_raw();
+        if exp.abs() > 10000 {
+            return Err(CalcError::BeyondAccuracy);
+        }
         let mut cursor = 0;
         let digits_len = digits.len();
         let exp_abs = (exp.unsigned_abs()+2) as usize;
-        let mut buf = vec![b'0'; digits_len+exp_abs];
+        let capacity = digits_len+exp_abs;
+        if capacity > 65536 {
+            return Err(CalcError::BeyondAccuracy);
+        }
+        let mut buf = vec![b'0'; capacity];
         if negative {
             buf[cursor] = b'-';
             cursor += 1;
@@ -515,6 +522,9 @@ impl StringExt for String {
 
     fn to_fixed_round(&self, prec: i32) -> Result<String, CalcError> {
         let (negative, digits, exp) = self.parse_rug_raw();
+        if exp.abs() > 10000 {
+            return Err(CalcError::BeyondAccuracy);
+        }
         let round_idx = (exp+prec) as usize;
         let mut carry = false;
         if round_idx < digits.len() && digits[round_idx] >= b'5' {
@@ -523,6 +533,9 @@ impl StringExt for String {
         let max_bound = (exp+prec)-1;
         let min_bound = std::cmp::min(0, exp-1);
         let capacity = ((max_bound-min_bound).max(0) as usize)+9;
+        if capacity > 65536 {
+            return Err(CalcError::BeyondAccuracy);
+        }
         let mut buf = vec![b'0'; capacity];
         let mut cursor = capacity-1;
         for index in (min_bound..=max_bound).rev() {

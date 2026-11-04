@@ -19,7 +19,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rug_calc = "0.1.16"
+rug_calc = "0.1.17"
 ```
 
 ## 🛠️ Supported Syntax
