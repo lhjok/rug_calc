@@ -523,7 +523,7 @@ impl StringExt for String {
         let max_bound = (exp+prec)-1;
         let min_bound = std::cmp::min(0, exp-1);
         let capacity = ((max_bound-min_bound).max(0) as usize)+9;
-        let mut buf = [b'0'; capacity];
+        let mut buf = vec![b'0'; capacity];
         let mut cursor = capacity-1;
         for index in (min_bound..=max_bound).rev() {
             if index == exp-1 && prec > 0 {
@@ -842,8 +842,9 @@ impl Calculator {
     /// ```
 
     pub fn run<S: AsRef<[u8]>>(&mut self, expr: S) -> Result<Float, CalcError> {
+        let vec_expr: Vec<u8>;
         let new_expr = if self.filter {
-            let vec_expr: Vec<u8> = expr.as_ref().iter()
+            vec_expr = expr.as_ref().iter()
                 .copied().filter(|&b| !b.is_ascii_whitespace()).collect();
             vec_expr.as_ref() } else { expr.as_ref() };
         self.parse(new_expr).map_err(|error| {
