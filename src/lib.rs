@@ -356,7 +356,7 @@ trait FloatExt {
     /// Validates if the result is a finite number and within the allowed magnitude.
     fn accuracy(self, n: &Float) -> Result<Float, CalcError>;
     /// Converts the arbitrary-precision float to a rounded string representation.
-    /// Supports custom precision up to 700 decimal places.
+    /// Supports custom precision up to 10000 decimal places.
     fn to_round(&self, digits: Option<usize>) -> Result<String, CalcError>;
 }
 
@@ -504,8 +504,8 @@ impl StringExt for String {
         let mut final_len = cursor;
         if let Some(dot) = dot_pos {
             let dec_len = cursor-dot;
-            final_len = if dec_len < 700
-            { dec_len } else { 700 };
+            final_len = if dec_len < 10000
+            { dec_len } else { 10000 };
             while final_len > 0 {
                 match buf[final_len-1] {
                     b'0' => final_len -= 1,
@@ -868,7 +868,7 @@ impl Calculator {
     /// Evaluates an expression and returns a formatted string.
     ///
     /// # Arguments
-    /// * `digits` - Number of decimal places to round to. Supports 1 to 700.
+    /// * `digits` - Number of decimal places to round to. Supports 1 to 10000.
     ///
     /// # Example
     /// ```
