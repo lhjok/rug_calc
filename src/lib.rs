@@ -31,7 +31,7 @@
 //! ## Mathematical Function Support
 //! `rug_calc` provides a comprehensive suite of arbitrary-precision functions powered by the MPFR library.
 //! * Advanced functions (Single-parameter): `ai`, `abs`, `cos`, `sin`, `tan`, `csc`, `sec`, `cot`, `coth`, `ceil`, `cosh`, `sinh`, `tanh`, `sech`, `ln`, `ln_gamma`, `csch`, `acos`, `asin`, `atan`, `acosh`, `asinh`, `atanh`, `log2`, `log10`, `sqrt`, `cbrt`, `fac`, `erf`, `li2`, `exp`, `exp2`, `exp10`, `eint`, `zeta`, `trunc`, `gamma`, `floor`, `fract`, `signum`, `erfc`, `digamma`, `recip`, `j0`, `j1`, `y0`, `y1`, `square`
-//! * Advanced functions (Double-parameter): `root`, `max`, `min`, `sinu`, `atan2`, `hypot`, `tanu`, `gamma_inc`, `positive_diff`, `remainder`, `rooti`, `agm`, `pow`, `jn`, `yn`, `copysign`
+//! * Advanced functions (Two-parameter): `root`, `max`, `min`, `sinu`, `atan2`, `hypot`, `tanu`, `gamma_inc`, `positive_diff`, `remainder`, `rooti`, `agm`, `pow`, `jn`, `yn`, `copysign`
 //!
 //! ## Constant Identifiers
 //! To maintain parsing efficiency and avoid ambiguity with functions, constants use single-character uppercase identifiers:
@@ -65,7 +65,7 @@
 //!
 //! // 3.1 Advanced functions (Single-parameter)
 //! let cos_sin_pi_4 = calc.run("cos(sin(P/4))").unwrap();
-//! // 3.2 Advanced functions (Double-parameter)
+//! // 3.2 Advanced functions (Two-parameter)
 //! let atan2 = calc.run("atan2(3.0, -4.0)").unwrap();
 //!
 //! // 4. Mixing Scientific Notation with Special Constants
@@ -87,6 +87,11 @@
 use rug::Float;
 use rug::ops::Pow;
 use std::cmp::max;
+use std::error::Error;
+use std::fmt::{
+    Display, Formatter,
+    Result as FmtResult,
+};
 use rug::float::Constant;
 use phf::phf_map;
 use phf::Map;
@@ -138,6 +143,28 @@ pub enum CalcError {
     InvalidNumber,
 }
 
+impl Display for CalcError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        match self {
+            CalcError::UnknownOperator => write!(f, "Unknown Operator"),
+            CalcError::Custom(error) => write!(f, "{}", error),
+            CalcError::DivideByZero => write!(f, "Divide By Zero"),
+            CalcError::BeyondAccuracy => write!(f, "Beyond Accuracy"),
+            CalcError::UnknownError => write!(f, "Unknown Error"),
+            CalcError::ParameterError => write!(f, "Parameter Error"),
+            CalcError::ExpressionError => write!(f, "Expression Error"),
+            CalcError::FunctionUndefined => write!(f, "Function Undefined"),
+            CalcError::OperatorUndefined => write!(f, "Operator Undefined"),
+            CalcError::EmptyExpression => write!(f, "Empty Expression"),
+            CalcError::InvalidNumber => write!(f, "Invalid Number"),
+        }
+    }
+}
+
+// Standard Error trait implementation for CalcError.
+impl Error for CalcError {}
+
+/// Type alias for a single-parameter mathematical function.
 type MathFn1 = fn(Float, &Context) -> Result<Float, CalcError>;
 static MATH1: Map<&'static [u8], MathFn1> = phf_map! {
     b"ai" => |v, c| v.ai().accuracy(&c.max),
@@ -240,6 +267,7 @@ static MATH1: Map<&'static [u8], MathFn1> = phf_map! {
     },
 };
 
+/// Type alias for a two-parameter mathematical function.
 type MathFn2 = fn(Float, &Float, &Context) -> Result<Float, CalcError>;
 static MATH2: Map<&'static [u8], MathFn2> = phf_map! {
     b"max" => |v1, v2, c| v1.max(v2).accuracy(&c.max),
@@ -460,7 +488,7 @@ impl StringExt for String {
         let mut cursor = 0;
         let digits_len = digits.len();
         let exp_abs = (exp.unsigned_abs()+2) as usize;
-        let capacity = digits_len+exp_abs;
+        let capacity = digits_len + exp_abs;
         if capacity > 65536 {
             return Err(CalcError::BeyondAccuracy);
         }
@@ -587,24 +615,6 @@ impl Context {
     fn new(prec: u32) -> Self {
         let max = max_value(prec);
         Self { prec, max }
-    }
-}
-
-impl CalcError {
-    pub fn to_string(&self) -> String {
-        match self {
-            CalcError::UnknownOperator => String::from("Unknown Operator"),
-            CalcError::Custom(error) => String::from(error),
-            CalcError::DivideByZero => String::from("Divide By Zero"),
-            CalcError::BeyondAccuracy => String::from("Beyond Accuracy"),
-            CalcError::UnknownError => String::from("Unknown Error"),
-            CalcError::ParameterError => String::from("Parameter Error"),
-            CalcError::ExpressionError => String::from("Expression Error"),
-            CalcError::FunctionUndefined => String::from("Function Undefined"),
-            CalcError::OperatorUndefined => String::from("Operator Undefined"),
-            CalcError::EmptyExpression => String::from("Empty Expression"),
-            CalcError::InvalidNumber => String::from("Invalid Number"),
-        }
     }
 }
 
@@ -743,8 +753,12 @@ impl Calculator {
                         self.state = State::Operand;
                     }
                     while self.operator.len() != 0 && self.operator.last() != Some(&b'(') {
+                        let curr_operator = ch.priority()?;
                         let operator = self.operator.last().ok_or(CalcError::UnknownError)?;
-                        if operator.priority()? >= ch.priority()? {
+                        let prev_operator = operator.priority()?;
+                        let new_operator = if prev_operator == 3 && curr_operator == 3 {
+                            curr_operator + 1 } else { curr_operator };
+                        if prev_operator >= new_operator {
                             let value = self.operator.pop()
                                 .ok_or(CalcError::UnknownError)?.computing(self)?;
                             self.numbers.push(value);

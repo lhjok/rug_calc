@@ -36,7 +36,7 @@ rug_calc = "0.1.18"
 ## 📚 Mathematical Function Support
 `rug_calc` provides a comprehensive suite of arbitrary-precision functions powered by the MPFR library.
 * Advanced functions (Single-parameter): `ai`, `abs`, `cos`, `sin`, `tan`, `csc`, `sec`, `cot`, `coth`, `ceil`, `cosh`, `sinh`, `tanh`, `sech`, `ln`, `csch`, `acos`, `asin`, `atan`, `acosh`, `asinh`, `atanh`, `log2`, `log10`, `sqrt`, `cbrt`, `fac`, `erf`, `li2`, `exp`, `exp2`, `exp10`, `eint`, `zeta`, `trunc`, `gamma`, `floor`, `fract`, `signum`, `erfc`, `digamma`, `recip`, `ln_gamma`, `j0`, `j1`, `y0`, `y1`, `square`
-* Advanced functions (Double-parameter): `root`, `max`, `min`, `sinu`, `atan2`, `hypot`, `tanu`, `gamma_inc`, `positive_diff`, `remainder`, `rooti`, `agm`, `pow`, `jn`, `yn`, `copysign`
+* Advanced functions (Two-parameter): `root`, `max`, `min`, `sinu`, `atan2`, `hypot`, `tanu`, `gamma_inc`, `positive_diff`, `remainder`, `rooti`, `agm`, `pow`, `jn`, `yn`, `copysign`
 
 ## 💎 Constant Identifiers
 To maintain parsing efficiency and avoid ambiguity with functions, constants use single-character uppercase identifiers:
@@ -70,7 +70,7 @@ println!("Scientific result: {}", sci_result);
 
 // 3.1 Advanced functions (Single-parameter)
 let cos_sin_pi_4 = calc.run("cos(sin(P/4))").unwrap();
-// 3.2 Advanced functions (Double-parameter)
+// 3.2 Advanced functions (Two-parameter)
 let atan2 = calc.run("atan2(3.0, -4.0)").unwrap();
 
 // 4. Mixing Scientific Notation with Special Constants
