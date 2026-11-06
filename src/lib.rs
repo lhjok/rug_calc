@@ -715,12 +715,13 @@ impl Calculator {
                     if (ch == b'e' || ch == b'E') && matches!(self.marker, Marker::Number) {
                         continue;
                     } else if !matches!(self.marker, Marker::RParen | Marker::Const | Marker::Number) {
-                        self.marker = Marker::Func;
                         if matches!(self.marker, Marker::NegSub) {
                             self.is_resize_neg(self.bracket+1);
                             self.negative[self.bracket+1] = true;
-                            locat = index + 1;
-                        } continue;
+                            locat = index;
+                        }
+                        self.marker = Marker::Func;
+                        continue;
                     }
                     return Err(CalcError::ExpressionError);
                 },
@@ -775,15 +776,16 @@ impl Calculator {
                     }
                     if matches!(self.state, State::Operator | State::Initial) {
                         if !matches!(self.marker, Marker::Number) {
-                            self.operator.push(ch);
                             locat = index + 1;
-                            self.marker = Marker::LParen;
+                            self.operator.push(ch);
                             self.bracket += 1;
                             if matches!(self.marker, Marker::NegSub) {
-                                self.is_resize_neg(self.bracket+1);
-                                self.negative[self.bracket+1] = true;
+                                self.is_resize_neg(self.bracket);
+                                self.negative[self.bracket] = true;
                                 locat = index + 1;
-                            } continue;
+                            }
+                            self.marker = Marker::LParen;
+                            continue;
                         }
                     }
                     return Err(CalcError::ExpressionError);
@@ -815,7 +817,7 @@ impl Calculator {
                                     let value = self.numbers.pop().ok_or(CalcError::UnknownError)?;
                                     let func_val = func(value, &self.context)?;
                                     let result = if self.negative[self.bracket] {
-                                        func_val.as_neg() } else { func_val };
+                                        0.0 - func_val } else { func_val };
                                     self.parameter[self.bracket] = None;
                                     self.negative[self.bracket] = false;
                                     self.numbers.push(result);
@@ -826,7 +828,7 @@ impl Calculator {
                                     let value1 = self.numbers.pop().ok_or(CalcError::UnknownError)?;
                                     let func_val = func(value1, &value2, &self.context)?;
                                     let result = if self.negative[self.bracket] {
-                                        func_val.as_neg() } else { func_val };
+                                        0.0 - func_val } else { func_val };
                                     self.parameter[self.bracket] = None;
                                     self.negative[self.bracket] = false;
                                     self.numbers.push(result);
@@ -835,7 +837,7 @@ impl Calculator {
                             if self.negative[self.bracket] {
                                 let value = self.numbers.last_mut()
                                     .ok_or(CalcError::UnknownError)?;
-                                value.as_neg();
+                                *value = 0.0 - value.clone();
                             }
                             locat = index + 1;
                             self.operator.pop();
