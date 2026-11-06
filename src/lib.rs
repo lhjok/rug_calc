@@ -319,6 +319,7 @@ pub struct Calculator {
     marker: Marker,
     context: Context,
     operator: Vec<u8>,
+    negative: Vec<bool>,
     function: Vec<(Option<MathFn1>, Option<MathFn2>)>,
     parameter: Vec<Option<usize>>,
     numbers: Vec<Float>,
@@ -612,13 +613,14 @@ impl Calculator {
     pub fn new(prec: u32) -> Self {
         let prec = max(64, prec);
         Self {
+            marker: Marker::Init,
             state: State::Initial,
             context: Context::new(prec),
             numbers: Vec::with_capacity(96),
             operator: Vec::with_capacity(64),
             function: vec![(None, None); 32],
             parameter: vec![None; 32],
-            marker: Marker::Init,
+            negative: vec![false; 48],
             filter: false,
             bracket: 0,
         }
@@ -640,6 +642,11 @@ impl Calculator {
         self.operator = Vec::with_capacity(size); self
     }
 
+    /// Pre-allocates capacity for the negative stack to avoid frequent reallocations.
+    pub fn set_negative_size(&mut self, size: usize) -> &mut Self {
+        self.negative = vec![false; size]; self
+    }
+
     /// Resizes and initializes the function and parameter storage vectors to the specified size.
     pub fn set_function_size(&mut self, size: usize) -> &mut Self {
         self.function = vec![(None, None); size];
@@ -652,11 +659,19 @@ impl Calculator {
         self.function.fill((None, None));
         self.marker = Marker::Init;
         self.parameter.fill(None);
+        self.negative.fill(false);
         self.operator.clear();
         self.bracket = 0;
     }
 
-    fn is_resize(&mut self, target_idx: usize) {
+    fn is_resize_neg(&mut self, target_idx: usize) {
+        if target_idx >= self.negative.len() {
+            let len = self.negative.len();
+            self.negative.resize(target_idx+(len/2), false);
+        }
+    }
+
+    fn is_resize_func(&mut self, target_idx: usize) {
         if target_idx >= self.function.len() {
             let len = self.function.len();
             self.function.resize(target_idx+(len/2), (None, None));
@@ -699,9 +714,13 @@ impl Calculator {
                 ch @ b'a'..=b'z' | ch @ b'E' | ch @ b'_' => {
                     if (ch == b'e' || ch == b'E') && matches!(self.marker, Marker::Number) {
                         continue;
-                    } else if !matches!(self.marker, Marker::RParen | Marker::Const | Marker::NegSub | Marker::Number) {
+                    } else if !matches!(self.marker, Marker::RParen | Marker::Const | Marker::Number) {
                         self.marker = Marker::Func;
-                        continue;
+                        if matches!(self.marker, Marker::NegSub) {
+                            self.is_resize_neg(self.bracket+1);
+                            self.negative[self.bracket+1] = true;
+                            locat = index + 1;
+                        } continue;
                     }
                     return Err(CalcError::ExpressionError);
                 },
@@ -743,11 +762,11 @@ impl Calculator {
                         let name = &bytes[locat..index];
                         let target_idx = self.bracket + 1;
                         if let Some(&func_ptr) = MATH1.get(name) {
-                            self.is_resize(target_idx);
+                            self.is_resize_func(target_idx);
                             self.function[target_idx] = (Some(func_ptr), None);
                             self.parameter[target_idx] = Some(1);
                         } else if let Some(&func_ptr) = MATH2.get(name) {
-                            self.is_resize(target_idx);
+                            self.is_resize_func(target_idx);
                             self.function[target_idx] = (None, Some(func_ptr));
                             self.parameter[target_idx] = Some(1);
                         } else {
@@ -755,12 +774,16 @@ impl Calculator {
                         }
                     }
                     if matches!(self.state, State::Operator | State::Initial) {
-                        if !matches!(self.marker, Marker::Number | Marker::NegSub) {
+                        if !matches!(self.marker, Marker::Number) {
                             self.operator.push(ch);
                             locat = index + 1;
                             self.marker = Marker::LParen;
                             self.bracket += 1;
-                            continue;
+                            if matches!(self.marker, Marker::NegSub) {
+                                self.is_resize_neg(self.bracket+1);
+                                self.negative[self.bracket+1] = true;
+                                locat = index + 1;
+                            } continue;
                         }
                     }
                     return Err(CalcError::ExpressionError);
@@ -790,16 +813,29 @@ impl Calculator {
                             if let Some(func) = self.function[self.bracket].0.take() {
                                 if self.parameter[self.bracket] == Some(1) {
                                     let value = self.numbers.pop().ok_or(CalcError::UnknownError)?;
-                                    self.numbers.push(func(value, &self.context)?);
+                                    let func_val = func(value, &self.context)?;
+                                    let result = if self.negative[self.bracket] {
+                                        func_val.as_neg() } else { func_val };
                                     self.parameter[self.bracket] = None;
+                                    self.negative[self.bracket] = false;
+                                    self.numbers.push(result);
                                 } else { return Err(CalcError::ParameterError); }
                             } else if let Some(func) = self.function[self.bracket].1.take() {
                                 if self.parameter[self.bracket] == Some(2) {
                                     let value2 = self.numbers.pop().ok_or(CalcError::UnknownError)?;
                                     let value1 = self.numbers.pop().ok_or(CalcError::UnknownError)?;
-                                    self.numbers.push(func(value1, &value2, &self.context)?);
+                                    let func_val = func(value1, &value2, &self.context)?;
+                                    let result = if self.negative[self.bracket] {
+                                        func_val.as_neg() } else { func_val };
                                     self.parameter[self.bracket] = None;
+                                    self.negative[self.bracket] = false;
+                                    self.numbers.push(result);
                                 } else { return Err(CalcError::ParameterError); }
+                            }
+                            if self.negative[self.bracket] {
+                                let value = self.numbers.last_mut()
+                                    .ok_or(CalcError::UnknownError)?;
+                                value.as_neg();
                             }
                             locat = index + 1;
                             self.operator.pop();
