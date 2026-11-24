@@ -19,7 +19,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rug_calc = "0.3.5"
+rug_calc = "0.3.6"
 ```
 
 ## 🛠️ Supported Syntax
@@ -27,7 +27,8 @@ rug_calc = "0.3.5"
 * Basic arithmetic operations: `+`, `-`, `*`, `/`, `%`, `^`
 * Floating-point remainder (fmod): `%`
 * Exponentiation (power): `^`
-* Unlimited nesting depth for grouped expressions: `()`,
+* Factorial (factorial, non-negative integers): `!` (`n!`)
+* Unlimited nesting depth for grouped expressions: `()`
 * Scientific notation: `1.23e-5`, `1.23E-5`, `1.23e+5`, `1.23E5`
 * Constant Identifiers: `P`, `Y`, `G`, `L`
 * Operator Distinction: Automatically differentiates between as a negative sign and as a subtraction operator based on context. `0-5` vs. `-5`
