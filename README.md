@@ -33,6 +33,7 @@ rug_calc = "0.3.7"
 * Constant Identifiers: `P`, `Y`, `G`, `L`
 * Operator Distinction: Automatically differentiates between as a negative sign and as a subtraction operator based on context. `0-5` vs. `-5`
 * Supports scientific notation: Case-insensitive `e` or `E` is supported when preceded by a digit.
+* Support more permissive implicit multiplication (default: implicit multiplication takes higher precedence than explicit multiplication)
 
 ## 📚 Mathematical Function Support
 `rug_calc` provides a comprehensive suite of arbitrary-precision functions powered by the MPFR library.
