@@ -109,6 +109,7 @@ enum Marker {
     Char,
     Const,
     Func,
+    Fact,
     Sci,
 }
 
@@ -589,20 +590,19 @@ impl StringExt for String {
         if round_idx < digits.len() && digits[round_idx] >= b'5' {
             carry = true;
         }
-        let max_bound = (exp+prec)-1;
-        let min_bound = std::cmp::min(0, exp-1);
-        let capacity = ((max_bound-min_bound).max(0) as usize)+9;
+        let max_bound = round_idx - 1;
+        let min_bound = std::cmp::min(0, exp-1) as usize;
+        let capacity = (max_bound-min_bound).max(0) + 9;
         if exp.abs() > 10000 || capacity > 65536 {
             return Err(CalcError::BeyondAccuracy);
         }
         let mut buf = vec![b'0'; capacity];
-        let mut cursor = capacity-1;
+        let mut cursor = capacity - 1;
         for index in (min_bound..=max_bound).rev() {
-            if index == exp-1 && prec > 0 {
+            if index == (exp-1) as usize && prec > 0 {
                 buf[cursor] = b'.';
                 cursor -= 1;
             }
-            let index = index as usize;
             let mut digit = if index < digits.len() {
                 digits[index]
             } else { b'0' };
@@ -791,7 +791,9 @@ impl Calculator {
                 b'0'..=b'9' | b'.' => {
                     if matches!(self.marker, Marker::Func) {
                         continue;
-                    } else if matches!(self.marker, Marker::RParen | Marker::Const) {
+                    } else if matches!(self.marker, Marker::Fact | Marker::Const) {
+                        return Err(CalcError::ExpressionError(index+1));
+                    } else if matches!(self.marker, Marker::RParen) {
                         self.eval_power_first()?;
                         self.implicit_mul();
                     }
@@ -809,7 +811,7 @@ impl Calculator {
                         self.is_resize_neg(self.operator.len());
                         self.negative[self.operator.len()] = NegPos::Record;
                         locat = index;
-                    } else if matches!(self.marker, Marker::RParen | Marker::Const) {
+                    } else if matches!(self.marker, Marker::RParen | Marker::Const | Marker::Fact) {
                         self.eval_power_first()?;
                         self.implicit_mul();
                     } else if matches!(self.marker, Marker::Number | Marker::Sci) {
@@ -834,7 +836,7 @@ impl Calculator {
                         self.marker = Marker::NegSub;
                         self.negstate = NegPos::Record;
                         continue;
-                    } else if !matches!(self.marker, Marker::Number | Marker::RParen | Marker::Const) {
+                    } else if !matches!(self.marker, Marker::Number | Marker::RParen | Marker::Const | Marker::Fact) {
                         return Err(CalcError::ExpressionError(index+1));
                     }
                     if matches!(self.state, State::Operator | State::Initial) {
@@ -885,6 +887,7 @@ impl Calculator {
                         return Err(CalcError::ExpressionError(index+1));
                     }
                     self.state = State::Operand;
+                    self.marker = Marker::Fact;
                     locat = index + 1;
                     continue;
                 },
@@ -904,12 +907,10 @@ impl Calculator {
                         } else {
                             return Err(CalcError::FunctionUndefined((locat, index)));
                         }
-                    }
-                    if matches!(self.marker, Marker::RParen | Marker::Const) {
+                    } else if matches!(self.marker, Marker::RParen | Marker::Const | Marker::Fact) {
                         self.eval_power_first()?;
                         self.implicit_mul();
-                    }
-                    if matches!(self.marker, Marker::NegSub) {
+                    } else if matches!(self.marker, Marker::NegSub) {
                         self.is_resize_neg(self.operator.len());
                         self.negative[self.operator.len()] = NegPos::Record;
                         self.negstate = NegPos::Init;
@@ -1003,7 +1004,7 @@ impl Calculator {
                     };
                     let prec = self.context.prec;
                     let mut value = Float::with_val(prec, constant);
-                    if matches!(self.marker, Marker::RParen | Marker::Const) {
+                    if matches!(self.marker, Marker::RParen | Marker::Const | Marker::Fact) {
                         self.eval_power_first()?;
                         self.implicit_mul();
                     }
