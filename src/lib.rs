@@ -22,7 +22,7 @@
 //! * Basic arithmetic operations: `+`, `-`, `*`, `/`, `%`, `^`
 //! * Floating-point remainder (fmod): `%`
 //! * Exponentiation (power): `^`
-//! * Factorial (factorial, non-negative integers): `!` (`n!`)
+//! * Postfix factorial operator applied to non-negative integers: `!`
 //! * Unlimited nesting depth for grouped expressions: `()`
 //! * Scientific notation: `1.23e-5`, `1.23E-5`, `1.23e+5`, `1.23E5`
 //! * Constant Identifiers: `P`, `Y`, `G`, `L`
